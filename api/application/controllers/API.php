@@ -337,13 +337,22 @@ class API extends MY_Controller {
         {
             $tipe = $this->input->get("tipe");
             $level = $this->level;
-            if($tipe != "release_so"){
+            if($tipe == "release_so"){
                 $data = $this->model->gd(
                     "data_order",
                     "*", 
                     $level == "1" 
-                    ? "deleted_date IS NULL AND release_sign IS NULL AND tipe = '$tipe'" 
-                    : "deleted_date IS NULL AND release_sign IS NULL AND pic = '".$this->id_user."' AND tipe='$tipe'",
+                    ? "deleted_date IS NULL AND release_sign != '' AND release_sign_time != ''" 
+                    : "deleted_date IS NULL AND pic = '".$this->id_user."' AND release_sign != '' AND release_sign_time != ''",
+                    "result"
+                );
+            }else if($tipe == "delete_so"){
+                $data = $this->model->gd(
+                    "data_order",
+                    "*", 
+                    $level == "1" 
+                    ? "deleted_date IS NOT NULL AND id != ''" 
+                    : "deleted_date IS NOT NULL AND pic = '".$this->id_user."' AND id != ''",
                     "result"
                 );
             }else{
@@ -351,8 +360,8 @@ class API extends MY_Controller {
                     "data_order",
                     "*", 
                     $level == "1" 
-                    ? "deleted_date IS NULL AND release_sign != '' AND release_sign_time != ''" 
-                    : "deleted_date IS NULL AND pic = '".$this->id_user."' AND release_sign != '' AND release_sign_time != ''",
+                    ? "deleted_date IS NULL AND release_sign IS NULL AND tipe = '$tipe'" 
+                    : "deleted_date IS NULL AND release_sign IS NULL AND pic = '".$this->id_user."' AND tipe='$tipe'",
                     "result"
                 );
             }

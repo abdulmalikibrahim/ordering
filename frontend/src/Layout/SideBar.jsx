@@ -67,12 +67,21 @@ const SideBar = ({handleLogout, countRemainSO}) => {
             {
                 (levelAccount === "1" || levelAccount === "2") &&
                 <>
-                    <li className={pageName.includes('input_so') || pageName.includes('reduce_order') || pageName.includes('additional_order') || pageName.includes('release_so') ? "nav-item active" : "nav-item"}>
+                    <li className={
+                        ["input_so", "reduce_order", "additional_order", "release_so", "delete_so"].some(keyword => pageName.includes(keyword))
+                        ? "nav-item active"
+                        : "nav-item"}
+                    >
                         <a className="nav-link" data-bs-toggle="collapse" href="#input_so" aria-expanded="false" aria-controls="input_so">
                             <span className="menu-title">Data SO</span>
                             <i className="mdi mdi-note-plus menu-icon"></i>
                         </a>
-                        <div className={pageName.includes('input_so') || pageName.includes('reduce_order') || pageName.includes('additional_order') || pageName.includes('release_so') ? "collapse show" : "collapse"} id="input_so">
+                        <div className={
+                            ["input_so", "reduce_order", "additional_order", "release_so", "delete_so"].some(keyword => pageName.includes(keyword))
+                            ? "collapse show"
+                            : "collapse"} 
+                            id="input_so"
+                        >
                             <ul className="nav flex-column sub-menu">
                                 <li className={pageName === 'input_so' ? "nav-item active" : "nav-item"}>
                                     <Link className="nav-link" to="/input_so">
@@ -92,6 +101,11 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                                 <li className={pageName === 'release_so' ? "nav-item active" : "nav-item"}>
                                     <Link className="nav-link" to="/release_so">
                                         <span className="menu-title">Release SO</span>
+                                    </Link>
+                                </li>
+                                <li className={pageName === 'delete_so' ? "nav-item active" : "nav-item"}>
+                                    <Link className="nav-link" to="/delete_so">
+                                        <span className="menu-title">Delete SO</span>
                                     </Link>
                                 </li>
                             </ul>

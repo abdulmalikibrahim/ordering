@@ -27,6 +27,7 @@ const App = () => {
         <Route path="/reduce_order" element={<Input_SO API_URL={API_URL} />} />
         <Route path="/additional_order" element={<Input_SO API_URL={API_URL} />} />
         <Route path="/release_so" element={<Input_SO API_URL={API_URL} />} />
+        <Route path="/delete_so" element={<Input_SO API_URL={API_URL} />} />
         <Route path="/remain_approve" element={<RemainApprove API_URL={API_URL} />} />
         <Route path="/already_approve" element={<RemainApprove API_URL={API_URL} />} />
       </Routes>

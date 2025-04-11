@@ -66,6 +66,9 @@ const Input_SO = ({API_URL}) => {
         } else if (pageName === 'release_so') {
             settitleTable('Release SO');
             setmodeInput('release_so');
+        }  else if (pageName === 'delete_so') {
+            settitleTable('Delete SO');
+            setmodeInput('delete_so');
         } 
         setreloadTable(Math.random() * 10);
     },[window.location.pathname])
@@ -74,7 +77,7 @@ const Input_SO = ({API_URL}) => {
         <Index API_URL={API_URL}>
             <div className="row">
                 {
-                    modeInput !== "release_so" &&
+                    modeInput !== "release_so" && modeInput !== "delete_so" &&
                     <div className="col-12 text-end mb-2">
                         <Button variant="outline-primary" onClick={() => handleShow()}><i className="fas fa-plus"></i> Tambah</Button>
                     </div> 
@@ -241,7 +244,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
             }
             </>, sortable: true
         },
-        ...(modeInput !== "release_so" 
+        ...(modeInput !== "release_so" && modeInput !== "delete_so" 
             ? [
             { name: "Action", selector: (row) => 
                 <ButtonAction data={row} />, 
