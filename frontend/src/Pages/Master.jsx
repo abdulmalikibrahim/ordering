@@ -6,7 +6,7 @@ import { useGlobal } from "../GlobalContext";
 
 const Master = ({API_URL}) => {
     const [reloadTable,setreloadTable] = useState(1);
-    const { levelAccount } = useGlobal
+    const { levelAccount } = useGlobal();
 
     return (
         <Index API_URL={API_URL}>
