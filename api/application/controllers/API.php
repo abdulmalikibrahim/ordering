@@ -82,10 +82,20 @@ class API extends MY_Controller {
             $this->fb($fb);
         }
 
+        $level_name = "Admin";
+        if($validation->level == "2"){
+            $level_name = "User";
+        }else if($validation->level == "3"){
+            $level_name = "Supervisor";
+        }else if($validation->level == "4"){
+            $level_name = "Manager";
+        }
         $data = [
             "id_user" => $validation->id,
+            "name" => $validation->name,
             "level" => $validation->level,
             "dept" => $validation->dept,
+            "level_name" => $level_name
         ];
         
         $this->session->set_userdata($data);
@@ -100,11 +110,20 @@ class API extends MY_Controller {
     function checkLogin()
     {
         if(empty($this->session->userdata("id_user"))){
-            $fb = ["statusCode" => 500, "res" => "Session kosong, silahkan login", "id_user" => $this->session->userdata("id_user")];
+            $fb = ["statusCode" => 202, "res" => "Session kosong, silahkan login", "id_user" => $this->session->userdata("id_user")];
             $this->fb($fb);
         }
         
-        $fb = ["statusCode" => 200, "res" => "Session masih ada", "id_user" => $this->session->userdata("id_user")];
+        $fb = [
+            "statusCode" => 200, 
+            "res" => "Session masih ada", 
+            "id_user" => $this->id_user, 
+            "name" => $this->name, 
+            "level" => $this->level, 
+            "dept" => $this->dept,
+            "level_name" => $this->level_name, 
+            "dept_name" => $this->dept_name
+        ];
         $this->fb($fb);
     }
 
@@ -316,8 +335,27 @@ class API extends MY_Controller {
     //DATA SO
         function get_data_so()
         {
-            $type = $this->input->post("type");
-            $data = $this->model->gd("data_order","*","created_by = '".$this->id_user."' AND type='$type'");
+            $tipe = $this->input->get("tipe");
+            $level = $this->level;
+            if($tipe != "release_so"){
+                $data = $this->model->gd(
+                    "data_order",
+                    "*", 
+                    $level == "1" 
+                    ? "deleted_date IS NULL AND release_sign IS NULL AND tipe = '$tipe'" 
+                    : "deleted_date IS NULL AND release_sign IS NULL AND pic = '".$this->id_user."' AND tipe='$tipe'",
+                    "result"
+                );
+            }else{
+                $data = $this->model->gd(
+                    "data_order",
+                    "*", 
+                    $level == "1" 
+                    ? "deleted_date IS NULL AND release_sign != '' AND release_sign_time != ''" 
+                    : "deleted_date IS NULL AND pic = '".$this->id_user."' AND release_sign != '' AND release_sign_time != ''",
+                    "result"
+                );
+            }
             $newData = [];
             if (!empty($data)) {
                 foreach ($data as $row) {
@@ -327,7 +365,7 @@ class API extends MY_Controller {
                     if(!empty($row->spv_sign)){
                         $data_spv = $this->model->gd("account", "name", "id = '$row->spv_sign'", "row");
                         $spv_sign = $data_spv->name;
-                        $spv_sign_time = date("d-M-Y H:i:s",strtotime($row->spv_sign_time));
+                        $spv_sign_time = empty($row->spv_sign_time) ? "" : date("d-M-Y H:i",strtotime($row->spv_sign_time));
                     }
                     
                     $mng_sign = '-';
@@ -335,14 +373,22 @@ class API extends MY_Controller {
                     if(!empty($row->mng_sign)){
                         $data_spv = $this->model->gd("account", "name", "id = '$row->mng_sign'", "row");
                         $mng_sign = $data_spv->name;
-                        $mng_sign_time = date("d-M-Y H:i:s",strtotime($row->mng_sign_time));
+                        $mng_sign_time = empty($row->mng_sign_time) ? "" : date("d-M-Y H:i",strtotime($row->mng_sign_time));
                     }
+                    
+                    if(!empty($row->release_sign)){
+                        $account = $this->model->gd("account", "name, (SELECT name FROM departement WHERE id=dept) as name_dept", "id = '$row->release_sign'", "row");
+                        $release_sign = $account->name;
+                    }else{
+                        $release_sign = '';
+                    }
+                    $release_sign_time = !empty($row->release_sign_time) ? date("d-M-Y H:i",strtotime($row->release_sign_time)) : '';
 
                     $total_part = $this->model->gd("data_part_order","COUNT(*) as total","so_number = '$row->so_number'","row");
 
                     $newData[] = [
                         "id" => $row->id,
-                        "created_time" => date("d-M-Y H:i:s",strtotime($row->created_time)),
+                        "created_time" => empty($row->created_time) ? "" : date("d-M-Y H:i:s",strtotime($row->created_time)),
                         "creator" => $account->name ?? '',
                         "dept_creator" => $account->name_dept ?? '', // Hindari error jika dept NULL
                         "so_number" => $row->so_number,
@@ -351,11 +397,36 @@ class API extends MY_Controller {
                         "spv_sign_time" => $spv_sign_time,
                         "mng_sign" => $mng_sign,
                         "mng_sign_time" => $mng_sign_time,
+                        "release_sign" => $release_sign,
+                        "release_sign_time" => $release_sign_time,
                         "total_part" => $total_part->total,
                     ];
                 }
             }
             $this->fb($newData);
+        }
+
+        function get_detail_part_so()
+        {
+            $so_number = $this->input->get("so_number");
+            $data = $this->model->gd("data_part_order","*", "so_number = '$so_number'" ,"result");
+            $newData = [];
+            if (!empty($data)) {
+                foreach ($data as $row) {
+                    $detail_part = $this->model->gd("master","part_name,vendor_site_alias,job_no","part_number = '$row->part_number' AND vendor_code = '$row->vendor_code'","row");
+                    $newData[] = [
+                        "tgl_delivery" => empty($row->tgl_delivery) ? "" : date("d-M-Y",strtotime($row->tgl_delivery)),
+                        "shop_code" => $row->shop_code,
+                        "part_number" => $row->part_number,
+                        "part_name" => $detail_part->part_name,
+                        "vendor_code" => $row->vendor_code,
+                        "vendor_name" => $detail_part->vendor_site_alias,
+                        "qty_kanban" => $row->qty_kanban,
+                        "job_no" => $detail_part->job_no,
+                    ];
+                }
+            }
+            $this->fb($newData);   
         }
 
         function upload_parts()
@@ -365,7 +436,7 @@ class API extends MY_Controller {
             $config['allowed_types'] = 'xls|xlsx';
 
             $this->upload->initialize($config);
-            if (!$this->upload->do_upload('upload-file')) {
+            if (!$this->upload->do_upload('file')) {
                 // Jika upload gagal, tampilkan error
                 $error = $this->upload->display_errors();
                 $this->fb(["statusCode" => 500, "res" => $error]);
@@ -378,30 +449,63 @@ class API extends MY_Controller {
             require 'vendor/autoload.php';
             $objPHPExcel = IOFactory::load($file_path);
 
-            $clear_data = $this->model->delete("master", "id !=");
             // Membaca sheet pertama
             $sheet = $objPHPExcel->getSheet(0);
             $highestRow = $sheet->getHighestRow();
             $highestColumn = $sheet->getHighestColumn();
 
             $data = [];
+            
+            //CREATE DATA ORDER
+            $pic = $this->input->post("pic");
+            $mode_input = $this->input->post("modeInput");
+            $check_so_number = $this->model->gd("data_order","COUNT(*) as total","created_time LIKE '%".date("Y-m-")."%' AND tipe = '$mode_input'","row");
+            $tipe_so = $mode_input == "upload_so" ? "SO" : ($mode_input == "reduce" ? "REDUCE" : "ADD");
+            $so_number = $tipe_so."/PCD/KAP/".date("m/Y/").sprintf("%03d", $check_so_number->total + 1);
+            $detail_account = $this->model->gd("account","spv,mng,(SELECT shop_code FROM departement WHERE id=account.dept) as shop_code","id = '$pic'","row");
+
             // Looping untuk membaca data dari setiap baris
             for ($row = 2; $row <= $highestRow; $row++) { // Mulai dari baris ke-2 (baris pertama biasanya header)
                 if(!empty(str_replace(" ","",$sheet->getCell('A' . $row)->getValue()))){
+                    $cellValue = $sheet->getCell('B' . $row)->getValue();
+                    if (is_numeric($cellValue)) {
+                        $timestamp = Date::excelToTimestamp($cellValue);
+                        $tgl_delivery = date('Y-m-d', $timestamp);
+                    } else {
+                        // Jika ternyata string biasa
+                        $tgl_delivery = date('Y-m-d', strtotime($cellValue));
+                    }
+
+                    $qty_kanban = $sheet->getCell('E' . $row)->getValue();
+                    if($mode_input == "reduce" && substr_count($sheet->getCell('E' . $row)->getValue(), "-") <= 0){
+                        $qty_kanban = $sheet->getCell('E' . $row)->getValue()*-1;
+                    }
+
                     $data[] = [
-                        'ta' => $sheet->getCell('A' . $row)->getValue(),
-                        'part_name' => $sheet->getCell('B' . $row)->getValue(),
-                        'vendor_code' => $sheet->getCell('C' . $row)->getValue(),
-                        'vendor_name' => $sheet->getCell('D' . $row)->getValue(),
-                        'vendor_site' => $sheet->getCell('E' . $row)->getValue(),
-                        'vendor_site_alias' => $sheet->getCell('F' . $row)->getValue(),
-                        'job_no' => $sheet->getCell('G' . $row)->getValue(),
-                        'remark' => $sheet->getCell('H' . $row)->getValue()
+                        'so_number' => $so_number,
+                        'tgl_delivery' => $tgl_delivery,
+                        'shop_code' => $detail_account->shop_code,
+                        'part_number' => $sheet->getCell('C' . $row)->getValue(),
+                        'vendor_code' => $sheet->getCell('D' . $row)->getValue(),
+                        'qty_kanban' => $qty_kanban,
+                        'remarks' => $sheet->getCell('F' . $row)->getValue(),
                     ];
                 }
             }
             
-            $insert = $this->model->insert_batch("master",$data);
+            //INPUT SO
+            $data_input = [
+                "created_by" => $this->id_user,
+                "pic" => $pic,
+                "spv_sign" => $detail_account->spv,
+                "mng_sign" => $detail_account->mng,
+                "so_number" => $so_number,
+                "tipe" => $mode_input,
+                "shop_code" => $detail_account->shop_code,
+            ];
+            $this->model->insert("data_order",$data_input);
+            
+            $insert = $this->model->insert_batch("data_part_order",$data);
             if($insert){
                 $fb = ["statusCode" => 200, "res" => "Upload success"];
             }else{
@@ -410,7 +514,199 @@ class API extends MY_Controller {
             unlink($file_path);
             $this->fb($fb);
         }
+
+        function delete_so_number()
+        {
+            if(empty($this->id_user)){
+                $fb = ["statusCode" => 500, "res" => "Session kosong"];
+                $this->fb($fb);
+            }
+
+            $so_number = $this->input->post("so_number");
+            $deleteData = [
+                "deleted_date" => date("Y-m-d H:i:s"),
+            ];
+            $this->model->update("data_order","so_number = '$so_number'",$deleteData);
+            $this->model->update("data_part_order","so_number = '$so_number'",$deleteData);
+            $fb = ["statusCode" => 200, "res" => "Delete Success"];
+            $this->fb($fb);
+        }
+
+        function release_so()
+        {
+            $level = $this->level;
+            $id_user = $this->id_user;
+
+            if(empty($level)){
+                $fb = ["statusCode" => 400, "res" => "Sesi login anda telah berakhir, refresh halaman dan login kembali"];
+                $this->fb($fb);
+            }
+
+            if($level != "1"){
+                $fb = ["statusCode" => 400, "res" => "Anda tidak memiliki hak release"];
+                $this->fb($fb);
+            }
+
+            $this->form_validation->set_rules('so_number', 'SO Number', 'required|trim');
+            if($this->form_validation->run() === FALSE){
+                $fb = ["statusCode" => 400, "res" => validation_errors()];
+                $this->fb($fb);
+            }
+
+            $so_number = $this->input->post("so_number");
+            $data = [ "release_sign" => $id_user, "release_sign_time" => date("Y-m-d H:i:s") ];
+            $this->model->update("data_order","so_number = '$so_number'",$data);
+            $fb = ["statusCode" => 200, "res" => "Release berhasil"];
+            $this->fb($fb);
+        }
     //DATA SO
+
+    //REMAIN SO
+        function get_data_so_management()
+        {
+            $level = $this->level;
+            $id_user = $this->id_user;
+            $tipe = $this->input->get("tipe");
+
+            if($tipe == "remain"){
+                $data = $this->model->gd(
+                    "data_order",
+                    "*", 
+                    $level == "3" 
+                        ? "deleted_date IS NULL AND spv_sign_time IS NULL AND mng_sign_time IS NULL AND spv_sign = '$id_user'" 
+                        : "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NULL AND mng_sign = '$id_user'" ,
+                    "result"
+                );
+            }else if($tipe == "approved"){
+                $data = $this->model->gd(
+                    "data_order",
+                    "*", 
+                    $level == "3" 
+                        ? "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND spv_sign = '$id_user'" 
+                        : "deleted_date IS NULL AND mng_sign_time IS NOT NULL AND mng_sign = '$id_user'" ,
+                    "result"
+                );
+            }
+            $newData = [];
+            if (!empty($data)) {
+                foreach ($data as $row) {
+                    $account = $this->model->gd("account", "name, (SELECT name FROM departement WHERE id=dept) as name_dept", "id = '$row->created_by'", "row");
+                    $spv_sign = '-';
+                    $spv_sign_time = '-';
+                    if(!empty($row->spv_sign)){
+                        $data_spv = $this->model->gd("account", "name", "id = '$row->spv_sign'", "row");
+                        $spv_sign = $data_spv->name;
+                        $spv_sign_time = empty($row->spv_sign_time) ? "" : date("d-M-Y H:i",strtotime($row->spv_sign_time));
+                    }
+                    
+                    $mng_sign = '-';
+                    $mng_sign_time = '-';
+                    if(!empty($row->mng_sign)){
+                        $data_spv = $this->model->gd("account", "name", "id = '$row->mng_sign'", "row");
+                        $mng_sign = $data_spv->name;
+                        $mng_sign_time = empty($row->mng_sign_time) ? "" : date("d-M-Y H:i",strtotime($row->mng_sign_time));
+                    }
+                    
+                    if(!empty($row->release_sign)){
+                        $account = $this->model->gd("account", "name, (SELECT name FROM departement WHERE id=dept) as name_dept", "id = '$row->release_sign'", "row");
+                        $release_sign = $account->name;
+                    }else{
+                        $release_sign = '';
+                    }
+                    $release_sign_time = !empty($row->release_sign_time) ? date("d-M-Y H:i",strtotime($row->release_sign_time)) : '';
+
+                    $total_part = $this->model->gd("data_part_order","COUNT(*) as total","so_number = '$row->so_number'","row");
+
+                    $newData[] = [
+                        "id" => $row->id,
+                        "created_time" => empty($row->created_time) ? "" : date("d-M-Y H:i",strtotime($row->created_time)),
+                        "creator" => $account->name ?? '',
+                        "dept_creator" => $account->name_dept ?? '', // Hindari error jika dept NULL
+                        "so_number" => $row->so_number,
+                        "shop_code" => $row->shop_code,
+                        "spv_sign" => $spv_sign,
+                        "spv_sign_time" => $spv_sign_time,
+                        "mng_sign" => $mng_sign,
+                        "mng_sign_time" => $mng_sign_time,
+                        "release_sign" => $release_sign,
+                        "release_sign_time" => $release_sign_time,
+                        "total_part" => $total_part->total,
+                    ];
+                }
+            }
+            $this->fb($newData);
+        }
+
+        function approve_so()
+        {
+            $level = $this->level;
+            $id_user = $this->id_user;
+
+            if(empty($level)){
+                $fb = ["statusCode" => 400, "res" => "Sesi login anda telah berakhir, refresh halaman dan login kembali"];
+                $this->fb($fb);
+            }
+
+            $this->form_validation->set_rules('so_number', 'SO Number', 'required|trim');
+            if($this->form_validation->run() === FALSE){
+                $fb = ["statusCode" => 400, "res" => validation_errors()];
+                $this->fb($fb);
+            }
+
+            $so_number = $this->input->post("so_number");
+            $data = [ $level == "3" ? "spv_sign_time" : "mng_sign_time" => date("Y-m-d H:i:s") ];
+            $this->model->update("data_order","so_number = '$so_number' AND ".($level == "3" ? "spv_sign" : "mng_sign")." = '$id_user'",$data);
+            $fb = ["statusCode" => 200, "res" => "Approval berhasil"];
+            $this->fb($fb);
+        }
+    //REMAIN SO
+
+    function count_remain_approve()
+    {
+        $level = $this->level;
+        $id_user = $this->id_user;
+
+        if(empty($level)){
+            $fb = ["statusCode" => 400, "res" => "Sesi login anda telah berakhir, refresh halaman dan login kembali"];
+            $this->fb($fb);
+        }
+
+        if($level == "3"){
+            $data = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND spv_sign_time IS NULL AND mng_sign_time IS NULL AND spv_sign = '$id_user'","row");
+        }else{
+            $data = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NULL AND mng_sign = '$id_user'","row");
+        }
+        $fb = ["statusCode" => 200, "res" => $data->total];
+        $this->fb($fb);
+    }
+
+    function get_shop_code()
+    {
+        $shop_code = $this->model->gd("departement","shop_code","id !=","result");
+        $return_data = [];
+        if(!empty($shop_code)){
+            foreach ($shop_code as $shop_code) {
+                $return_data[] = $shop_code->shop_code;
+            }
+        }
+        $this->fb($return_data);
+    }
+
+    function get_pic_shop()
+    {
+        $pic = $this->model->gd("account","name,id,(SELECT name FROM departement WHERE id=account.dept) as name_dept","level = '2'","result");
+        $return_data = [];
+        if(!empty($pic)){
+            foreach ($pic as $pic) {
+                $return_data[] = [
+                    "name" => $pic->name,
+                    "id" => $pic->id,
+                    "name_dept" => $pic->name_dept
+                ];
+            }
+        }
+        $this->fb($return_data);
+    }
 
     function printDN()
     {

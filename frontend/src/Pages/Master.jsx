@@ -2,16 +2,21 @@ import React, { useEffect, useState } from "react";
 import Index from '../Layout/Index';
 import DataTable from "react-data-table-component";
 import axios from "axios";
+import { useGlobal } from "../GlobalContext";
 
 const Master = ({API_URL}) => {
     const [reloadTable,setreloadTable] = useState(1);
+    const { levelAccount } = useGlobal
 
     return (
         <Index API_URL={API_URL}>
             <div className="row">
-                <div className="col-12">
-                    <FormUpload API_URL={API_URL} setreloadTable={setreloadTable} />
-                </div>
+                {
+                    levelAccount === "1" &&
+                    <div className="col-12">
+                        <FormUpload API_URL={API_URL} setreloadTable={setreloadTable} />
+                    </div>
+                }
                 <div className="col-12">
                     <Table API_URL={API_URL} reloadTable={reloadTable} />
                 </div>

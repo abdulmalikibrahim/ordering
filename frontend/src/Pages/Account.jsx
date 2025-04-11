@@ -190,8 +190,8 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
     // Fungsi Reset Form
     const clearForm = () => {
         if (dataUpdate) {
-            console.log("Data Update:", dataUpdate);
             setUsername(dataUpdate.username || '');
+            setPassword(dataUpdate.password || '');
             setName(dataUpdate.name || '');
             setDept(dataUpdate.id_dept || '');
             setLevel(dataUpdate.id_level || 1);
@@ -267,7 +267,8 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                 handleClose();
             }
         } catch (error) {
-            if (error.response?.status === 400) {
+            console.log(error.response)
+            if (error.response.status === 400) {
                 Swal.fire("Error", error.response.data.res, "error");
             } else {
                 Swal.fire("Error", "Maaf data gagal disimpan", "error");

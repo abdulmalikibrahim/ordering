@@ -8,6 +8,8 @@ import Master from './Pages/Master';
 import Account from './Pages/Account';
 import Departement from './Pages/Departement';
 import Input_SO from './Pages/Input_SO';
+import { GlobalProvider } from './GlobalContext';
+import RemainApprove from './Pages/RemainApprove';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -21,9 +23,12 @@ const App = () => {
         <Route path="/master" element={<Master API_URL={API_URL} />} />
         <Route path="/account" element={<Account API_URL={API_URL} />} />
         <Route path="/db_dept" element={<Departement API_URL={API_URL} />} />
-        <Route path="/input_so" element={<Input_SO API_URL={API_URL} type={"input_so"} />} />
-        <Route path="/reduce_order" element={<Input_SO API_URL={API_URL} type={"reduce_order"} />} />
-        <Route path="/additional_order" element={<Input_SO API_URL={API_URL} type={"additional_order"} />} />
+        <Route path="/input_so" element={<Input_SO API_URL={API_URL} />} />
+        <Route path="/reduce_order" element={<Input_SO API_URL={API_URL} />} />
+        <Route path="/additional_order" element={<Input_SO API_URL={API_URL} />} />
+        <Route path="/release_so" element={<Input_SO API_URL={API_URL} />} />
+        <Route path="/remain_approve" element={<RemainApprove API_URL={API_URL} />} />
+        <Route path="/already_approve" element={<RemainApprove API_URL={API_URL} />} />
       </Routes>
     </Router>
   );
@@ -31,6 +36,8 @@ const App = () => {
 
 
 root.render(
-  <App />
+  <GlobalProvider>
+    <App />
+  </GlobalProvider>
 );
 

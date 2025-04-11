@@ -5,3 +5,14 @@ ALTER TABLE `account` CHANGE `level` `level` INT(11) NOT NULL COMMENT '1=Admin,2
 CREATE TABLE `ordering`.`departement` (`id` INT NOT NULL AUTO_INCREMENT , `name` CHAR(100) NOT NULL , `shop_code` CHAR(4) NOT NULL , PRIMARY KEY (`id`)) ENGINE = InnoDB;
 CREATE TABLE `ordering`.`data_order` (`id` INT NOT NULL AUTO_INCREMENT , `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP , `created_by` INT NOT NULL , `spv_sign` INT NOT NULL , `spv_sign_time` DATETIME NOT NULL , `mng_sign` INT NOT NULL , `mng_sign_time` DATETIME NOT NULL , `so_number` CHAR(100) NOT NULL , `shop_code` CHAR(50) NOT NULL , PRIMARY KEY (`id`)) ENGINE = InnoDB;
 CREATE TABLE `ordering`.`data_part_order` (`id` INT NOT NULL AUTO_INCREMENT , `so_number` CHAR(100) NOT NULL , `tgl_delivery` DATETIME NOT NULL , `shop_code` CHAR(50) NOT NULL , `part_number` CHAR(100) NOT NULL , `vendor_code` CHAR(50) NOT NULL , `qty_kanban` INT NOT NULL , `remarks` VARCHAR(255) NOT NULL , PRIMARY KEY (`id`)) ENGINE = InnoDB;
+ALTER TABLE `departement` CHANGE `shop_code` `shop_code` CHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL;
+ALTER TABLE `data_order` ADD `tipe` ENUM('upload','reduce','additional') NOT NULL DEFAULT 'upload' AFTER `so_number`;
+ALTER TABLE `data_order` CHANGE `tipe` `tipe` ENUM('upload_so','reduce','additional') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'upload_so';
+ALTER TABLE `data_order` ADD `deleted_date` DATETIME NULL AFTER `id`;
+ALTER TABLE `data_order` ADD `pic` INT NULL AFTER `created_by`;
+ALTER TABLE `data_order` CHANGE `spv_sign_time` `spv_sign_time` DATETIME NULL, CHANGE `mng_sign_time` `mng_sign_time` DATETIME NULL;
+ALTER TABLE `data_part_order` CHANGE `tgl_delivery` `tgl_delivery` DATE NOT NULL;
+ALTER TABLE `data_part_order` ADD `deleted_date` DATETIME NULL AFTER `id`;
+ALTER TABLE `data_order` ADD `release_by` INT NULL AFTER `mng_sign_time`;
+ALTER TABLE `data_order` ADD `release_time` DATETIME NULL AFTER `release_by`;
+ALTER TABLE `data_order` CHANGE `release_by` `release_sign` INT(11) NULL DEFAULT NULL, CHANGE `release_time` `release_sign_time` DATETIME NULL DEFAULT NULL;

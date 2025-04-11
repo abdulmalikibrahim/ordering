@@ -6,3 +6,4 @@ api/application/logs
 api/vendor
 frontend/node_modules
 frontend/.env
+run_apps.bat

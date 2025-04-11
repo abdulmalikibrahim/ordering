@@ -21,8 +21,11 @@ class MY_Controller extends CI_Controller {
     
         // Load session data
         $this->id_user = $this->session->userdata("id_user");
+        $this->name = $this->session->userdata("name");
         $this->level = $this->session->userdata("level");
         $this->dept = $this->session->userdata("dept");
+        $this->level_name = $this->session->userdata("level_name");
+        $this->dept_name = $this->session->userdata("dept_name");
     }    
 
     function fb($array)

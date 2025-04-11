@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import NavBar from './NavBar';
 import SideBar from './SideBar';
 import Footer from './Footer';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Index = ({children,API_URL}) => {
     const [titlePage,settitlePage] = useState('Dashboard')
@@ -10,6 +12,20 @@ const Index = ({children,API_URL}) => {
         console.log(title,icon)
         settitlePage(title)
         seticonPage(icon)
+    }
+
+    const navigate = useNavigate();
+    const handleLogout = async () => {
+        try {
+            const response = await axios.post(`${API_URL}/logout`,{}, {
+                withCredentials: true
+            })
+            if(response.status === 200){
+                navigate('/')
+            }
+        } catch (error) {
+            console.error(error)
+        }
     }
 
     useEffect(() => {
@@ -27,6 +43,12 @@ const Index = ({children,API_URL}) => {
             setTitleIcon('Reduce Order', 'mdi mdi-note-plus');
         } else if (pageName === 'additional_order') {
             setTitleIcon('Additional Order', 'mdi mdi-note-plus');
+        } else if (pageName === 'release_so') {
+            setTitleIcon('Release SO', 'mdi mdi-note-plus');
+        } else if (pageName === "remain_approve"){
+            setTitleIcon('SO Remain Approve', 'mdi mdi-information');
+        } else if (pageName === "already_approve"){
+            setTitleIcon('SO Already Approve', 'mdi mdi-check-circle');
         } else {
             setTitleIcon('Dashboard', 'mdi mdi-home');
         }
@@ -34,9 +56,9 @@ const Index = ({children,API_URL}) => {
 
     return (  
     <div className="container-scroller">
-        <NavBar API_URL={API_URL} />
+        <NavBar API_URL={API_URL} handleLogout={handleLogout} />
         <div className="container-fluid page-body-wrapper">
-            <SideBar />
+            <SideBar handleLogout={handleLogout} />
             <div className="main-panel">
                 <div className="content-wrapper">
                     <div className="page-header">
@@ -46,7 +68,6 @@ const Index = ({children,API_URL}) => {
                         </span> {titlePage}
                         </h3>
                     </div>
-                    {/* BODY IN HERE */}
                     {children}
                     <Footer />
                 </div>

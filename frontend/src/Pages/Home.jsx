@@ -4,7 +4,7 @@ import Index from '../Layout/Index';
 const Home = ({API_URL}) => {
     return (
         <Index API_URL={API_URL}>
-            <div className="row">
+            {/* <div className="row">
                 <div className="col-3">
                     <Card type={'success'} title={'TOTAL'} count={15} periode={'Maret 2025'} icon={'fas fa-table'} />
                 </div>
@@ -17,7 +17,8 @@ const Home = ({API_URL}) => {
                 <div className="col-3">
                     <Card type={'warning'} title={'UNDER PROGRESS'} count={15} periode={'Maret 2025'} icon={'fas fa-bars-progress'} />
                 </div>
-            </div>
+            </div> */}
+            <h2>DASHBOARD UNDER DEVELOPMENT</h2>
         </Index>
     );
 }

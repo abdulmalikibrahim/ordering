@@ -39,6 +39,10 @@ const Login = ({API_URL}) => {
             if(response.status === 200){
                 navigate('/home')
             }
+            if(response.status === 202){
+                navigate('/')
+            }
+            setLoadingLabel('SIGN IN')
         } catch (error) {
             setLoadingLabel('SIGN IN')
             console.error(error)
