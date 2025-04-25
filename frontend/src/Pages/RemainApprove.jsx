@@ -89,11 +89,19 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const path = window.location.pathname;
+    const pageName = path.split("/")[1];
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`${API_URL}/get_data_so_management?tipe=${modeInput}`, {
+            const path = window.location.pathname;
+            const pageName = path.split("/")[1];
+            let url = `${API_URL}/get_data_so_management?tipe=${modeInput}`;
+            if (pageName === 'remain_approve_other_shop') {
+                url = `${API_URL}/get_data_so_management?tipe=${modeInput}&other=yes`;
+            } 
+            const response = await axios.get(url, {
                 withCredentials: true,
             });
             const fetchedData = Array.isArray(response.data) ? response.data : [];
@@ -127,9 +135,13 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
     const ButtonAction = ({...props}) => {
         const ClickApprove = async (so_number) => {
             try {
+                let url = `${API_URL}/approve_so`;
+                if (pageName === 'remain_approve_other_shop') {
+                    url = `${API_URL}/approve_so?other=yes`;
+                } 
                 const formdata = new FormData();
                 formdata.append("so_number",so_number);
-                const response = await axios.post(`${API_URL}/approve_so`, formdata, {
+                const response = await axios.post(url, formdata, {
                     withCredentials: true,
                 });
                 if(response.status === 200){
@@ -146,7 +158,8 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
 
         return(
             <>
-                <Button variant="info" className="me-2 btn-sm" title="Approve" onClick={() => ClickApprove(props.data.so_number)}><i className="fas fa-thumbs-up me-1"></i> Approve</Button>
+                <Button variant="info" className="me-2 btn-sm" title="Approve" onClick={() => ClickApprove(props.data.so_number)}><i className="fas fa-thumbs-up"></i></Button>
+                <Button variant="danger" className="btn-sm" title="Reject" onClick={() => ClickApprove(props.data.so_number)}><i className="fas fa-times-circle"></i></Button>
             </>
         )
     }

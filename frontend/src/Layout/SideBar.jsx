@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useGlobal } from '../GlobalContext';
 import CountRemainSO from '../Component/CountRemainSO';
+import CountRemainRelease from '../Component/CountRemainRelease';
 
 const SideBar = ({handleLogout, countRemainSO}) => {
     const { 
@@ -51,7 +52,7 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                             <>
                                 <li className={pageName === 'account' ? "nav-item active" : "nav-item"}>
                                     <Link className="nav-link" to="/account">
-                                        <span className="menu-title">Account</span>
+                                        <span className="menu-title">User</span>
                                     </Link>
                                 </li>
                                 <li className={pageName === 'db_dept' ? "nav-item active" : "nav-item"}>
@@ -85,7 +86,7 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                             <ul className="nav flex-column sub-menu">
                                 <li className={pageName === 'input_so' ? "nav-item active" : "nav-item"}>
                                     <Link className="nav-link" to="/input_so">
-                                        <span className="menu-title">Upload SO</span>
+                                        <span className="menu-title">Special Order</span>
                                     </Link>
                                 </li>
                                 <li className={pageName === 'reduce_order' ? "nav-item active" : "nav-item"}>
@@ -111,6 +112,12 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                             </ul>
                         </div>
                     </li>
+                    <li className={pageName === 'need_release' ? "nav-item active" : "nav-item"}>
+                        <Link className="nav-link" to="/need_release">
+                            <span className="menu-title">Remain Release <CountRemainRelease /></span>
+                            <i className="mdi mdi-book-open-variant menu-icon"></i>
+                        </Link>
+                    </li>
                 </>
             }
             {
@@ -118,13 +125,19 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                 <>
                     <li className={pageName === 'remain_approve' ? "nav-item active" : "nav-item"}>
                         <Link className="nav-link" to="/remain_approve">
-                            <span className="menu-title">SO Remain Approve <CountRemainSO /></span>
+                            <span className="menu-title">Approval <CountRemainSO /></span>
+                            <i className="mdi mdi-information menu-icon"></i>
+                        </Link>
+                    </li>
+                    <li className={pageName === 'remain_approve_other_shop' ? "nav-item active" : "nav-item"}>
+                        <Link className="nav-link" to="/remain_approve_other_shop">
+                            <span className="menu-title">Approval Other Shop</span>
                             <i className="mdi mdi-information menu-icon"></i>
                         </Link>
                     </li>
                     <li className={pageName === 'already_approve' ? "nav-item active" : "nav-item"}>
                         <Link className="nav-link" to="/already_approve">
-                            <span className="menu-title">SO Already Approve</span>
+                            <span className="menu-title">Already Approve</span>
                             <i className="mdi mdi-check-circle menu-icon"></i>
                         </Link>
                     </li>

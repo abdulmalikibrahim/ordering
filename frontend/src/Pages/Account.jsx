@@ -136,8 +136,6 @@ const Table = ({API_URL, reloadTable, handleShow, setmode, setdataUpdate, setrel
         { name: "Username", selector: (row) => row.username, sortable: true },
         { name: "Departement", selector: (row) => row.dept, sortable: true },
         { name: "Level", selector: (row) => row.level, sortable: true },
-        { name: "SPV", selector: (row) => row.spv, sortable: true },
-        { name: "Manager", selector: (row) => row.mng, sortable: true },
         { name: "Action", selector: (row) => 
             <ButtonAction data={row} />, 
         sortable: true },
@@ -181,8 +179,6 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
     const [mng, setMNG] = useState(0);
     const [idUpdate, setidUpdate] = useState(0);
     const [dataDept, setdataDept] = useState([]);
-    const [dataSPV, setdataSPV] = useState([]);
-    const [dataMNG, setdataMNG] = useState([]);
     
     const dataLevel = ["Admin", "User", "Supervisor", "Manager"];
     const requiredSymbol = <span className="text-danger">*</span>;
@@ -222,25 +218,6 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
         }
     };
 
-    // Ambil daftar Supervisor dan Manager
-    const GetSuperior = async () => {
-        try {
-            const level_superior = [3, 4];
-            for (const value of level_superior) {
-                const response = await axios.get(`${API_URL}/get_superior/${value}`);
-                if (response.status === 200) {
-                    if (value === 3) {
-                        setdataSPV(response.data);
-                    } else {
-                        setdataMNG(response.data);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
     // Simpan Data
     const SaveData = async () => {
         try {
@@ -251,8 +228,6 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
             formdata.append('password', password);
             formdata.append('dept', dept);
             formdata.append('level', level);
-            formdata.append('spv', spv);
-            formdata.append('mng', mng);
             formdata.append('mode', mode);
 
             console.log("Data yang dikirim ke backend:", {
@@ -279,13 +254,8 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
 
     useEffect(() => {
         GetDept();
-        GetSuperior();
         clearForm();
     }, [dataUpdate]);
-
-    useEffect(() => {
-        console.log("Supervisor:", spv, "Manager:", mng);
-    }, [spv, mng]);
 
     return (
         <Modal show={show} onHide={handleClose}>
@@ -318,22 +288,6 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                 <select className="mb-2 form-control text-dark" value={level} onChange={(e) => setLevel(parseInt(e.target.value, 10))}>
                     {dataLevel.map((value, index) => (
                         <option key={index} value={index + 1}>{value}</option>
-                    ))}
-                </select>
-
-                <p className="mb-1">Supervisor: <span className="text-secondary">(Optional)</span></p>
-                <select className="mb-2 form-control text-dark" value={spv} onChange={(e) => setSPV(parseInt(e.target.value, 10))}>
-                    <option value="0">Pilih Supervisor</option>
-                    {dataSPV.map((value) => (
-                        <option key={value.id} value={value.id}>{value.name}</option>
-                    ))}
-                </select>
-
-                <p className="mb-1">Manager: <span className="text-secondary">(Optional)</span></p>
-                <select className="mb-2 form-control text-dark" value={mng} onChange={(e) => setMNG(parseInt(e.target.value, 10))}>
-                    <option value="0">Pilih Manager</option>
-                    {dataMNG.map((value) => (
-                        <option key={value.id} value={value.id}>{value.name}</option>
                     ))}
                 </select>
             </Modal.Body>

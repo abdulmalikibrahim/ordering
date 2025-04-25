@@ -8,6 +8,7 @@ import Modal from 'react-bootstrap/Modal';
 import Form from 'react-bootstrap/Form';
 import ModalDetailPart from '../Component/ModalDetailPart';
 import { useGlobal } from '../GlobalContext';
+import SelectBoxPIC from '../Component/SelectBoxPIC';
 
 const customStyles = {
     headCells: {
@@ -69,6 +70,9 @@ const Input_SO = ({API_URL}) => {
         }  else if (pageName === 'delete_so') {
             settitleTable('Delete SO');
             setmodeInput('delete_so');
+        }   else if (pageName === 'need_release') {
+            settitleTable('Remain Release');
+            setmodeInput('need_release');
         } 
         setreloadTable(Math.random() * 10);
     },[window.location.pathname])
@@ -94,17 +98,41 @@ const Input_SO = ({API_URL}) => {
                 data={detailPart}
                 loadingDetailPart={loadingDetailPart}
                 customStyles={customStyles}
+                API_URL={API_URL}
+                ShowPart={ShowPart}
+                setreloadTable={setreloadTable}
             />
         </Index>
     )
 }
 
 const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, ShowPart}) => {
+    const {setReloadCountRemain} = useGlobal();
     const {levelAccount} = useGlobal();
     const [data, setData] = useState([]);
-    const [filteredData, setFilteredData] = useState([]);
+    const [dataMaster, setDataMaster] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
+    const [filterSONumber, setFilterSONumber] = useState('');
+    const [filterCreator, setFilterCreator] = useState('');
+    const [filterDeptCreator, setFilterDeptCreator] = useState('');
+    const [filterShopCode, setFilterShopCode] = useState('');
+    const [filterDetailing, setFilterDetailing] = useState('')
+    const [filterCreatedDate, setFilterCreatedDate] = useState('');
+    const [filterSPVSign, setFilterSPVSign] = useState('');
+    const [filterMNGSign, setFilterMNGSign] = useState('');
+    const [filterRelease, setFilterRelease] = useState('');
+
+    const filteredData = data.filter(item =>
+        item.so_number.toLowerCase().includes(filterSONumber.toLowerCase()) &&
+        item.creator.toLowerCase().includes(filterCreator.toLowerCase()) &&
+        item.dept_creator.toLowerCase().includes(filterDeptCreator.toLowerCase()) &&
+        item.shop_code.toLowerCase().includes(filterShopCode.toLowerCase()) &&
+        item.detailing_part.toLowerCase().includes(filterDetailing.toLowerCase()) &&
+        item.created_time.toLowerCase().includes(filterCreatedDate.toLowerCase()) &&
+        (item.spv_sign.toLowerCase().includes(filterSPVSign.toLowerCase()) || item.spv_sign_time.toLowerCase().includes(filterSPVSign.toLowerCase())) &&
+        (item.mng_sign.toLowerCase().includes(filterSPVSign.toLowerCase()) || item.mng_sign_time.toLowerCase().includes(filterMNGSign.toLowerCase())) &&
+        (item.release_sign.toLowerCase().includes(filterSPVSign.toLowerCase()) || item.release_sign_time.toLowerCase().includes(filterRelease.toLowerCase()))
+    );
 
     const fetchData = async () => {
         setLoading(true);
@@ -114,31 +142,29 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
             });
             const fetchedData = Array.isArray(response.data) ? response.data : [];
             setData(fetchedData);
-            setFilteredData(fetchedData);
+            setReloadCountRemain(Math.random() * 10);
         } catch (error) {
             console.error("Error fetching data:", error);
         }
         setLoading(false); // Tidak perlu di `finally`
     };
+
+    const fetchDataMaster = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/data_part_master`, {
+                withCredentials: true,
+            });
+            const fetchedData = Array.isArray(response.data) ? response.data : [];
+            setDataMaster(fetchedData);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
   
     useEffect(() => {
         fetchData();
+        fetchDataMaster();
     }, [reloadTable]);
-
-    // Update data ketika search berubah
-    useEffect(() => {
-        if (!search) {
-            setFilteredData(data);
-            return;
-        }
-        const lowerSearch = search.toLowerCase();
-        const result = data.filter((item) =>
-            ["name", "username", "dept", "level", "spv", "mng"].some((key) =>
-                (item[key] ?? "").toLowerCase().includes(lowerSearch)
-            )
-        );
-        setFilteredData(result);
-    }, [search, data]);
 
     const ButtonAction = ({...props}) => {
         const ClickDelete = (so_number) => {
@@ -202,17 +228,123 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
     }
 
     const columns = [
-        { name: "No", selector: (row, index) => index + 1, sortable: true, width: "70px" },
-        { name: "Created", selector: (row) => { const created_time = row.created_time.split(" "); return(<>{created_time[0]}<br />{created_time[1]}</>)  }, sortable: true },
-        { name: "SO Number", selector: (row) => row.so_number, sortable: true, width: "250px" },
-        { name: "Creator", selector: (row) => row.creator, sortable: true },
-        { name: "Dept Creator", selector: (row) => row.dept_creator, sortable: true },
-        { name: "Shop Code", selector: (row) => row.shop_code, sortable: true },
-        { name: "Total Part", selector: (row) => 
-        <Button variant='primary' className='p-1 ps-2 pe-2' title='Click to Show List Part' style={{fontSize: '9pt'}} onClick={() => ShowPart(row.so_number)}>
-            {row.total_part}
-        </Button>, sortable: true },
-        { name: "SPV Sign", selector: (row) => 
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>Created Date</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterCreatedDate(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) => { const created_time = row.created_time.split(" "); return(<>{created_time[0]}<br />{created_time[1]}</>)  }, sortable: false },
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>SO Number</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterSONumber(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) => row.so_number, sortable: false, width: "250px" },
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>Creator</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterCreator(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) => row.creator, sortable: false },
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>Dept Creator</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterDeptCreator(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) => row.dept_creator, sortable: false },
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>Shop Code</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterShopCode(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) => row.shop_code, sortable: false },
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>Total Part</div>
+                    <div>
+                        <input
+                            list="master_part"
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterDetailing(e.target.value)}
+                        />
+                    </div>
+                    <datalist id="master_part">
+                        {
+                            dataMaster.map((item, index) => (
+                                <option value={item} key={index} />
+                            ))
+                        }
+                    </datalist>
+                </div>
+                ), selector: (row) => 
+                <div>
+                    <Button 
+                        variant='primary'
+                        className='p-1 ps-2 pe-2'
+                        title='Click to Show List Part'
+                        style={{fontSize: '9pt'}}
+                        onClick={() => ShowPart(row.so_number)}
+                    >
+                        {row.total_part}
+                    </Button>
+                </div>, sortable: false },
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>SPV Sign</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterSPVSign(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) => 
         <>
             {row.spv_sign}<br />
             {
@@ -220,8 +352,21 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                 ? <span className="badge badge-warning text-dark mt-1">Not Yet Sign</span> 
                 : <span className="badge badge-success text-dark mt-1">{row.spv_sign_time}</span>
             }
-        </>, sortable: true },
-        { name: "MNG Sign", selector: (row) =>  
+        </>, sortable: false },
+        { name: (
+                <div className='pt-2 pb-2'>
+                    <div>MNG Sign</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterMNGSign(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) =>  
         <>
             {row.mng_sign}<br />
             {
@@ -229,9 +374,22 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                 ? <span className="badge badge-warning text-dark mt-1">Not Yet Sign</span> 
                 : <span className="badge badge-success text-dark mt-1">{row.mng_sign_time}</span>
             }
-        </>, sortable: true },
+        </>, sortable: false },
         {
-            name: "Release", selector: (row) =>  
+            name: (
+                <div className='pt-2 pb-2'>
+                    <div>Release</div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="form-control mt-1 p-1 text-center"
+                            style={{ height: '26px', fontSize:'9pt' }}
+                            onChange={e => setFilterRelease(e.target.value)}
+                        />
+                    </div>
+                </div>
+                ), selector: (row) =>  
             <>
             {
                 row.spv_sign_time && row.mng_sign_time 
@@ -242,7 +400,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                 )
                 : <span className="badge badge-warning text-dark mt-1">Waiting Approval</span> 
             }
-            </>, sortable: true
+            </>, sortable: false
         },
         ...(modeInput !== "release_so" && modeInput !== "delete_so" 
             ? [
@@ -260,19 +418,10 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                     <h2 className="mb-3">{titleTable}</h2>
                 </div>
                 <div className="col-3 text-end">
-                    <div className="input-group mb-2">
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="form-control"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <Button variant='primary' onClick={() => fetchData()} className='ms-3 rounded'>Refresh</Button>
-                    </div>
+                    <Button variant='primary' onClick={() => fetchData()} className='ms-3 rounded'>Refresh</Button>
                 </div>
             </div>
-            
+
             <DataTable
                 columns={columns}
                 data={filteredData}
@@ -280,6 +429,8 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                 pagination
                 highlightOnHover
                 customStyles={customStyles}
+                noDataComponent={<div style={{ padding: '20px' }}>Tidak ada data ditemukan</div>}
+                persistTableHead
             />
         </div>
     );
@@ -288,23 +439,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
 const FormAdd = ({ handleClose, show, API_URL, setreloadTable, modeInput }) => {
     const {levelAccount, idAccount} = useGlobal();
     const [file, setFile] = useState(null);
-    const [picOptions, setPICOptions] = useState([]);
     const [pic, setpic] = useState("");
-    const getPICShop = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/get_pic_shop`);
-            const fetchedData = Array.isArray(response.data) ? response.data : [];
-            setPICOptions(fetchedData);
-        } catch (error) {
-            console.error("Error : ", error);
-        }
-    }
-
-    useEffect(() => {
-        getPICShop();
-        //eslint-disable-next-line
-    }, []);
-  
     const handleFileUpload = (event) => {
         setFile(event.target.files[0]);
         {
@@ -343,17 +478,7 @@ const FormAdd = ({ handleClose, show, API_URL, setreloadTable, modeInput }) => {
                 <div>
                     {
                         levelAccount === "1" &&
-                        <Form.Control
-                            as="select"
-                            value={pic}
-                            onChange={(e) => setpic(e.target.value)}
-                            className="mb-2 text-dark"
-                        >
-                        <option value="">Select PIC</option>
-                        {picOptions.map((pic, i) => (
-                            <option key={i} value={pic.id}>{`${pic.name} (${pic.name_dept})`}</option>
-                        ))}
-                        </Form.Control>
+                        <SelectBoxPIC setpic={setpic} pic={pic} API_URL={API_URL} />
                     }
                     <Form.Group>
                         <Form.Label>Upload File</Form.Label>

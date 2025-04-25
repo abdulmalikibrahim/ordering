@@ -40,4 +40,18 @@ class model extends CI_Model
 		$this->db->from($table);
 		return $this->db->get()->$status();
 	}
+	public function join_data($table, $table_join, $on_join, $select, $where, $status)
+	{
+		$this->db->select($select);
+		$this->db->where($where);
+		$this->db->from($table);
+		$this->db->join($table_join, $on_join);
+		if($status == 'result'){
+			return $this->db->get()->result();
+		}else if($status == 'result_array'){
+			return $this->db->get()->result_array();
+		}else{
+			return $this->db->get()->row();
+		}
+	}
 }

@@ -51,6 +51,10 @@ const Index = ({children,API_URL}) => {
             setTitleIcon('SO Remain Approve', 'mdi mdi-information');
         } else if (pageName === "already_approve"){
             setTitleIcon('SO Already Approve', 'mdi mdi-check-circle');
+        } else if (pageName === "need_release"){
+            setTitleIcon('Remain Release', 'mdi mdi-book-open-variant');
+        } else if (pageName === "remain_approve_other_shop"){
+            setTitleIcon('Approval Other Shop', 'mdi mdi-information');
         } else {
             setTitleIcon('Dashboard', 'mdi mdi-home');
         }
