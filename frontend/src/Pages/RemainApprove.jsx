@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import DataTable from 'react-data-table-component';
 import ModalDetailPart from '../Component/ModalDetailPart';
 import { useGlobal } from '../GlobalContext';
+import ModalCancelSO from '../Component/ModalCancelSO';
 
 const customStyles = {
     headCells: {
@@ -32,6 +33,10 @@ const RemainApprove = ({API_URL}) => {
     const [titleTable, settitleTable] = useState("");
     const [modeInput, setmodeInput] = useState("");
     const [loadingDetailPart, setLoadingDetailPart] = useState(true);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const handleCloseCancelModal = () => setShowCancelModal(false);
+    const handleShowCancelModal = () => setShowCancelModal(true);
+    const [soNumberCancel,setSoNumberCancel] = useState('');
     
     useEffect(() => {
         const path = window.location.pathname;
@@ -68,7 +73,16 @@ const RemainApprove = ({API_URL}) => {
         <Index API_URL={API_URL}>
             <div className="row">
                 <div className="col-12">
-                    <Table API_URL={API_URL} reloadTable={reloadTable} setreloadTable={setreloadTable} ShowPart={ShowPart} titleTable={titleTable} modeInput={modeInput} />
+                    <Table
+                        API_URL={API_URL}
+                        reloadTable={reloadTable}
+                        setreloadTable={setreloadTable}
+                        ShowPart={ShowPart}
+                        titleTable={titleTable}
+                        modeInput={modeInput}
+                        handleShowCancelModal={handleShowCancelModal} 
+                        setSoNumberCancel={setSoNumberCancel}
+                    />
                 </div>
             </div>
 
@@ -79,11 +93,20 @@ const RemainApprove = ({API_URL}) => {
                 loadingDetailPart={loadingDetailPart}
                 customStyles={customStyles}
             />
+
+            <ModalCancelSO 
+                showCancelModal={showCancelModal}
+                handleCloseCancelModal={handleCloseCancelModal}
+                API_URL={API_URL}
+                setreloadTable={setreloadTable}
+                modeInput={modeInput}
+                soNumberCancel={soNumberCancel}
+            />
         </Index>
     )
 }
 
-const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, modeInput}) => {
+const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, modeInput, handleShowCancelModal, setSoNumberCancel}) => {
     const {setReloadCountRemain} = useGlobal();
     const [data, setData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
@@ -155,11 +178,22 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
                 
             }
         };
+        
+        const CancelApprove = async (so_number) => {
+            try {
+                handleShowCancelModal();
+                setSoNumberCancel(so_number);
+            } catch (error) {
+                Swal.fire("Gagal!", "Terjadi kesalahan saat cancel.", "error");
+                console.error(error);
+                
+            }
+        };
 
         return(
             <>
                 <Button variant="info" className="me-2 btn-sm" title="Approve" onClick={() => ClickApprove(props.data.so_number)}><i className="fas fa-thumbs-up"></i></Button>
-                <Button variant="danger" className="btn-sm" title="Reject" onClick={() => ClickApprove(props.data.so_number)}><i className="fas fa-times-circle"></i></Button>
+                <Button variant="danger" className="btn-sm" title="Reject" onClick={() => CancelApprove(props.data.so_number)}><i className="fas fa-times-circle"></i></Button>
             </>
         )
     }

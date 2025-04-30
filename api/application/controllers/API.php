@@ -303,6 +303,7 @@ class API extends MY_Controller {
     //DATA SO
         function get_data_so()
         {
+            header("Content-Type: application/json");
             $tipe = $this->input->get("tipe");
             $level = $this->level;
             if($tipe == "release_so"){
@@ -310,8 +311,8 @@ class API extends MY_Controller {
                     "data_order",
                     "*", 
                     $level == "1" 
-                    ? "deleted_date IS NULL AND release_sign != '' AND release_sign_time != ''" 
-                    : "deleted_date IS NULL AND pic = '".$this->id_user."' AND release_sign != '' AND release_sign_time != ''",
+                    ? "deleted_date IS NULL AND release_sign != '' AND release_sign_time != '' ORDER BY created_time DESC" 
+                    : "deleted_date IS NULL AND pic = '".$this->id_user."' AND release_sign != '' AND release_sign_time != '' ORDER BY created_time DESC",
                     "result"
                 );
             }else if($tipe == "delete_so"){
@@ -319,15 +320,24 @@ class API extends MY_Controller {
                     "data_order",
                     "*", 
                     $level == "1" 
-                    ? "deleted_date IS NOT NULL AND id != ''" 
-                    : "deleted_date IS NOT NULL AND pic = '".$this->id_user."' AND id != ''",
+                    ? "deleted_date IS NOT NULL AND id != '' ORDER BY created_time DESC" 
+                    : "deleted_date IS NOT NULL AND pic = '".$this->id_user."' AND id != '' ORDER BY created_time DESC",
                     "result"
                 );
             }else if($tipe == "need_release"){
                 $data = $this->model->gd(
                     "data_order",
                     "*", 
-                    "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND release_sign IS NULL",
+                    "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND release_sign IS NULL ORDER BY created_time DESC",
+                    "result"
+                );
+            }else if($tipe == "reject_so"){
+                $data = $this->model->gd(
+                    "data_order",
+                    "*", 
+                    $level == "1" 
+                    ? "deleted_date IS NULL AND reject_by IS NOT NULL AND id != '' ORDER BY created_time DESC" 
+                    : "deleted_date IS NULL AND reject_by IS NOT NULL AND pic = '".$this->id_user."' AND id != '' ORDER BY created_time DESC",
                     "result"
                 );
             }else{
@@ -335,8 +345,8 @@ class API extends MY_Controller {
                     "data_order",
                     "*", 
                     $level == "1" 
-                    ? "deleted_date IS NULL AND tipe = '$tipe'" 
-                    : "deleted_date IS NULL AND pic = '".$this->id_user."' AND tipe='$tipe'",
+                    ? "deleted_date IS NULL AND tipe = '$tipe' ORDER BY created_time DESC" 
+                    : "deleted_date IS NULL AND pic = '".$this->id_user."' AND tipe='$tipe' ORDER BY created_time DESC",
                     "result"
                 );
             }
@@ -346,18 +356,37 @@ class API extends MY_Controller {
                     $account = $this->model->gd("account", "name, (SELECT name FROM departement WHERE id=dept) as name_dept", "id = '$row->created_by'", "row");
                     $spv_sign = '-';
                     $spv_sign_time = '-';
+                    $status_so = '';
+                    $reject_reason = '';
+                    $reject_by = '';
+                    $reject_date = '';
                     if(!empty($row->spv_sign)){
                         $data_spv = $this->model->gd("account", "name", "id = '$row->spv_sign'", "row");
                         $spv_sign = $data_spv->name;
                         $spv_sign_time = empty($row->spv_sign_time) ? "" : date("d-M-Y H:i",strtotime($row->spv_sign_time));
                     }
-                    
+
                     $mng_sign = '-';
                     $mng_sign_time = '-';
                     if(!empty($row->mng_sign)){
                         $data_spv = $this->model->gd("account", "name", "id = '$row->mng_sign'", "row");
                         $mng_sign = $data_spv->name;
                         $mng_sign_time = empty($row->mng_sign_time) ? "" : date("d-M-Y H:i",strtotime($row->mng_sign_time));
+                    }
+
+                    if(!empty($row->reject_date)){
+                        $account_reject = $this->model->gd("account", "name,level", "id = '$row->reject_by'", "row");
+                        $reject_by = $account_reject->name;
+                        $reject_date = date("d-M-Y",strtotime($row->reject_date));
+                        if($account_reject->level == "3"){
+                            $spv_sign = $reject_by;
+                            $spv_sign_time = "reject, ".$reject_date;
+                        }else if($account_reject->level == "4"){
+                            $mng_sign = $reject_by;
+                            $mng_sign_time = "reject, ".$reject_date;
+                        }
+                        $status_so = 'reject';
+                        $reject_reason = $row->reject_reason;
                     }
                     
                     if(!empty($row->release_sign)){
@@ -391,7 +420,11 @@ class API extends MY_Controller {
                         "release_sign" => $release_sign,
                         "release_sign_time" => $release_sign_time,
                         "total_part" => $total_part->total,
-                        "detailing_part" => $detailing_part
+                        "detailing_part" => $detailing_part,
+                        "status_so" => $status_so,
+                        "reject_by" => $reject_by,
+                        "reject_date" => $reject_date,
+                        "reject_reason" => $reject_reason,
                     ];
                 }
             }
@@ -603,8 +636,8 @@ class API extends MY_Controller {
                     "data_order",
                     "*", 
                     $level == "3" 
-                        ? "deleted_date IS NULL AND spv_sign_time IS NULL AND mng_sign_time IS NULL AND spv_sign $equal '$id_user'" 
-                        : "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NULL AND mng_sign $equal '$id_user'" ,
+                        ? "deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NULL AND mng_sign_time IS NULL AND spv_sign $equal '$id_user'" 
+                        : "deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NULL AND mng_sign $equal '$id_user'" ,
                     "result"
                 );
             }else if($tipe == "approved"){
@@ -612,8 +645,8 @@ class API extends MY_Controller {
                     "data_order",
                     "*", 
                     $level == "3" 
-                        ? "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND spv_sign $equal '$id_user'" 
-                        : "deleted_date IS NULL AND mng_sign_time IS NOT NULL AND mng_sign $equal '$id_user'" ,
+                        ? "deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NOT NULL AND spv_sign $equal '$id_user'" 
+                        : "deleted_date IS NULL AND reject_by IS NULL AND mng_sign_time IS NOT NULL AND mng_sign $equal '$id_user'" ,
                     "result"
                 );
             }
@@ -693,26 +726,26 @@ class API extends MY_Controller {
             $fb = ["statusCode" => 200, "res" => "Approval berhasil"];
             $this->fb($fb);
         }
-    //REMAIN SO
 
-    function count_remain_approve()
-    {
-        $level = $this->level;
-        $id_user = $this->id_user;
-
-        if(empty($level)){
-            $fb = ["statusCode" => 400, "res" => "Sesi login anda telah berakhir, refresh halaman dan login kembali"];
+        function count_remain_approve()
+        {
+            $level = $this->level;
+            $id_user = $this->id_user;
+    
+            if(empty($level)){
+                $fb = ["statusCode" => 400, "res" => "Sesi login anda telah berakhir, refresh halaman dan login kembali"];
+                $this->fb($fb);
+            }
+    
+            if($level == "3"){
+                $data = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NULL AND mng_sign_time IS NULL AND spv_sign = '$id_user'","row");
+            }else{
+                $data = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NULL AND mng_sign = '$id_user'","row");
+            }
+            $fb = ["statusCode" => 200, "res" => $data->total];
             $this->fb($fb);
         }
-
-        if($level == "3"){
-            $data = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND spv_sign_time IS NULL AND mng_sign_time IS NULL AND spv_sign = '$id_user'","row");
-        }else{
-            $data = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NULL AND mng_sign = '$id_user'","row");
-        }
-        $fb = ["statusCode" => 200, "res" => $data->total];
-        $this->fb($fb);
-    }
+    //REMAIN SO
 
     function count_remain_release()
     {
@@ -725,7 +758,7 @@ class API extends MY_Controller {
         $data = $this->model->gd(
             "data_order",
             "COUNT(*) as total", 
-            "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND release_sign IS NULL",
+            "deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND release_sign IS NULL",
             "row"
         );
         $fb = ["statusCode" => 200, "res" => $data->total];
@@ -1121,6 +1154,33 @@ class API extends MY_Controller {
         ];
 
         $fb = ["statusCode" => 200, "res" => ["bar" => $data_bar, "pie" => $data_pie]];
+        $this->fb($fb);
+    }
+
+    function cancel_approve_so()
+    {
+        $this->form_validation
+            ->set_rules("id_account","Account","required|trim")
+            ->set_rules("so_number","SO Number","required|trim")
+            ->set_rules("keterangan","Katerangan","required|trim");
+        
+        if($this->form_validation->run() === FALSE){
+            $fb = ["statusCode" => 500, "res" => validation_errors()];
+            $this->fb($fb);
+        }
+
+        $id_account = $this->input->post("id_account");
+        $so_number = $this->input->post("so_number");
+        $keterangan = htmlentities($this->input->post("keterangan"));
+        
+        $data_input = [
+            "reject_by" => $id_account,
+            "reject_date" => date("Y-m-d"),
+            "reject_reason" => $keterangan
+        ];
+
+        $this->model->update("data_order","so_number = '$so_number'",$data_input);
+        $fb = ["statusCode" => 200, "res" => "Proses berhasil di lakukan"];
         $this->fb($fb);
     }
 }

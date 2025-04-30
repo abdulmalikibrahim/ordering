@@ -67,10 +67,13 @@ const Input_SO = ({API_URL}) => {
         } else if (pageName === 'release_so') {
             settitleTable('Release SO');
             setmodeInput('release_so');
-        }  else if (pageName === 'delete_so') {
+        } else if (pageName === 'delete_so') {
             settitleTable('Delete SO');
             setmodeInput('delete_so');
-        }   else if (pageName === 'need_release') {
+        } else if (pageName === 'reject_so') {
+            settitleTable('Reject SO');
+            setmodeInput('reject_so');
+        } else if (pageName === 'need_release') {
             settitleTable('Remain Release');
             setmodeInput('need_release');
         } 
@@ -81,7 +84,7 @@ const Input_SO = ({API_URL}) => {
         <Index API_URL={API_URL}>
             <div className="row">
                 {
-                    modeInput !== "release_so" && modeInput !== "delete_so" &&
+                    modeInput !== "release_so" && modeInput !== "delete_so" && modeInput !== "reject_so" &&
                     <div className="col-12 text-end mb-2">
                         <Button variant="outline-primary" onClick={() => handleShow()}><i className="fas fa-plus"></i> Tambah</Button>
                     </div> 
@@ -226,9 +229,18 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
             }
         }
     }
-
+    const conditionalRowStyles = [
+        {
+            when: row => row.status_so === "reject",
+            style: {
+                backgroundColor: '#ffcdcd', // kuning muda
+                color: '#856404',           // coklat untuk teks (biar kelihatan)
+            },
+        },
+    ];
     const columns = [
-        { name: (
+        { 
+            name: (
                 <div className='pt-2 pb-2'>
                     <div>Created Date</div>
                     <div>
@@ -241,8 +253,13 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                         />
                     </div>
                 </div>
-                ), selector: (row) => { const created_time = row.created_time.split(" "); return(<>{created_time[0]}<br />{created_time[1]}</>)  }, sortable: false },
-        { name: (
+            ), selector: (row) => { 
+                const created_time = row.created_time.split(" "); 
+                return(<>{created_time[0]}<br />{created_time[1]}</>)  
+            }, sortable: false 
+        },
+        { 
+            name: (
                 <div className='pt-2 pb-2'>
                     <div>SO Number</div>
                     <div>
@@ -255,8 +272,10 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                         />
                     </div>
                 </div>
-                ), selector: (row) => row.so_number, sortable: false, width: "250px" },
-        { name: (
+            ), selector: (row) => row.so_number, sortable: false, width: "250px" 
+        },
+        { 
+            name: (
                 <div className='pt-2 pb-2'>
                     <div>Creator</div>
                     <div>
@@ -269,8 +288,10 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                         />
                     </div>
                 </div>
-                ), selector: (row) => row.creator, sortable: false },
-        { name: (
+            ), selector: (row) => row.creator, sortable: false 
+        },
+        { 
+            name: (
                 <div className='pt-2 pb-2'>
                     <div>Dept Creator</div>
                     <div>
@@ -283,8 +304,10 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                         />
                     </div>
                 </div>
-                ), selector: (row) => row.dept_creator, sortable: false },
-        { name: (
+            ), selector: (row) => row.dept_creator, sortable: false 
+        },
+        { 
+            name: (
                 <div className='pt-2 pb-2'>
                     <div>Shop Code</div>
                     <div>
@@ -297,8 +320,10 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                         />
                     </div>
                 </div>
-                ), selector: (row) => row.shop_code, sortable: false },
-        { name: (
+            ), selector: (row) => row.shop_code, sortable: false 
+        },
+        { 
+            name: (
                 <div className='pt-2 pb-2'>
                     <div>Total Part</div>
                     <div>
@@ -319,7 +344,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                         }
                     </datalist>
                 </div>
-                ), selector: (row) => 
+            ), selector: (row) =>
                 <div>
                     <Button 
                         variant='primary'
@@ -330,79 +355,130 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                     >
                         {row.total_part}
                     </Button>
-                </div>, sortable: false },
-        { name: (
-                <div className='pt-2 pb-2'>
-                    <div>SPV Sign</div>
-                    <div>
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="form-control mt-1 p-1 text-center"
-                            style={{ height: '26px', fontSize:'9pt' }}
-                            onChange={e => setFilterSPVSign(e.target.value)}
-                        />
-                    </div>
                 </div>
-                ), selector: (row) => 
-        <>
-            {row.spv_sign}<br />
-            {
-                row.spv_sign_time === "" 
-                ? <span className="badge badge-warning text-dark mt-1">Not Yet Sign</span> 
-                : <span className="badge badge-success text-dark mt-1">{row.spv_sign_time}</span>
-            }
-        </>, sortable: false },
-        { name: (
-                <div className='pt-2 pb-2'>
-                    <div>MNG Sign</div>
-                    <div>
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="form-control mt-1 p-1 text-center"
-                            style={{ height: '26px', fontSize:'9pt' }}
-                            onChange={e => setFilterMNGSign(e.target.value)}
-                        />
-                    </div>
-                </div>
-                ), selector: (row) =>  
-        <>
-            {row.mng_sign}<br />
-            {
-                row.mng_sign_time === "" 
-                ? <span className="badge badge-warning text-dark mt-1">Not Yet Sign</span> 
-                : <span className="badge badge-success text-dark mt-1">{row.mng_sign_time}</span>
-            }
-        </>, sortable: false },
-        {
-            name: (
-                <div className='pt-2 pb-2'>
-                    <div>Release</div>
-                    <div>
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="form-control mt-1 p-1 text-center"
-                            style={{ height: '26px', fontSize:'9pt' }}
-                            onChange={e => setFilterRelease(e.target.value)}
-                        />
-                    </div>
-                </div>
-                ), selector: (row) =>  
-            <>
-            {
-                row.spv_sign_time && row.mng_sign_time 
-                ? 
-                (levelAccount === "1" && row.release_sign_time === ""
-                    ? <Button variant="success" className="me-2 btn-sm" title="Release" onClick={() => ClickRelease(row.so_number)} style={{fontSize:'9pt'}}><i className="fas fa-check"></i> Release</Button> 
-                    : (!row.release_sign_time ? <span className="badge badge-warning text-dark mt-1">Waiting Release</span> : <>{row.release_sign}<br /><span className="badge badge-success text-dark mt-1">{row.release_sign_time}</span></>) 
-                )
-                : <span className="badge badge-warning text-dark mt-1">Waiting Approval</span> 
-            }
-            </>, sortable: false
+            , sortable: false 
         },
-        ...(modeInput !== "release_so" && modeInput !== "delete_so" 
+        ...(modeInput !== "reject_so")
+        ? [
+            { 
+                name: (
+                    <div className='pt-2 pb-2'>
+                        <div>SPV Sign</div>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                className="form-control mt-1 p-1 text-center"
+                                style={{ height: '26px', fontSize:'9pt' }}
+                                onChange={e => setFilterSPVSign(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                ), selector: (row) => 
+                    <>
+                        {row.spv_sign}<br />
+                        {
+                            row.spv_sign_time === "" ? (
+                                <span className="badge badge-warning text-dark mt-1">Not Yet Sign</span>
+                            ) : row.spv_sign_time.includes("reject") ? (
+                                <span className="badge badge-danger text-dark mt-1">{row.spv_sign_time}</span>
+                            ) : (
+                                <span className="badge badge-success text-dark mt-1">{row.spv_sign_time}</span>
+                            )
+                        }
+                    </>
+                , sortable: false 
+            },
+            { 
+                name: (
+                    <div className='pt-2 pb-2'>
+                        <div>MNG Sign</div>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                className="form-control mt-1 p-1 text-center"
+                                style={{ height: '26px', fontSize:'9pt' }}
+                                onChange={e => setFilterMNGSign(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                ), selector: (row) =>  
+                    <>
+                        {row.mng_sign}<br />
+                        {
+                            row.mng_sign_time === "" ? (
+                                <span className="badge badge-warning text-dark mt-1">Not Yet Sign</span>
+                            ) : row.mng_sign_time.includes("reject") ? (
+                                <span className="badge badge-danger text-dark mt-1">{row.mng_sign_time}</span>
+                            ) : (
+                                <span className="badge badge-success text-dark mt-1">{row.mng_sign_time}</span>
+                            )
+                        }
+                    </>
+                , sortable: false 
+            },
+            {
+                name: (
+                    <div className='pt-2 pb-2'>
+                        <div>Release</div>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                className="form-control mt-1 p-1 text-center"
+                                style={{ height: '26px', fontSize:'9pt' }}
+                                onChange={e => setFilterRelease(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    ), selector: (row) =>  
+                <>
+                {
+                    row.spv_sign_time && row.mng_sign_time 
+                    ? 
+                    (levelAccount === "1" && row.release_sign_time === ""
+                        ? <Button variant="success" className="me-2 btn-sm" title="Release" onClick={() => ClickRelease(row.so_number)} style={{fontSize:'9pt'}}><i className="fas fa-check"></i> Release</Button> 
+                        : (!row.release_sign_time ? <span className="badge badge-warning text-dark mt-1">Waiting Release</span> : <>{row.release_sign}<br /><span className="badge badge-success text-dark mt-1">{row.release_sign_time}</span></>) 
+                    )
+                    : <span className="badge badge-warning text-dark mt-1">Waiting Approval</span> 
+                }
+                </>, sortable: false
+            },
+        ] 
+        : [
+            { 
+                name: (
+                    <div className='pt-2 pb-2'>
+                        <div>Reject By</div>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                className="form-control mt-1 p-1 text-center"
+                                style={{ height: '26px', fontSize:'9pt' }}
+                                onChange={e => setFilterSPVSign(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                ), selector: (row) => 
+                    <>
+                        {row.reject_by}<br />
+                        <span className="badge badge-danger text-dark mt-1">{row.reject_date}</span>
+                    </>
+                , sortable: false 
+            },
+            { 
+                name: (
+                    <div className='pt-2 pb-2'>
+                        <div>Reason Reject</div>
+                    </div>
+                ), selector: (row) => 
+                    <div className='text-left' style={{whiteSpace: 'normal', wordWrap: 'break-word', overflowWrap: 'break-word'}}>{row.reject_reason}</div>
+                , sortable: false 
+            },
+        ],
+        ...(modeInput !== "delete_so" 
             ? [
             { name: "Action", selector: (row) => 
                 <ButtonAction data={row} />, 
@@ -429,6 +505,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                 pagination
                 highlightOnHover
                 customStyles={customStyles}
+                conditionalRowStyles={conditionalRowStyles}
                 noDataComponent={<div style={{ padding: '20px' }}>Tidak ada data ditemukan</div>}
                 persistTableHead
             />

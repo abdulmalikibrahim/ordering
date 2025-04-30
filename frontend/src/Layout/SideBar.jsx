@@ -69,7 +69,7 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                 (levelAccount === "1" || levelAccount === "2") &&
                 <>
                     <li className={
-                        ["input_so", "reduce_order", "additional_order", "release_so", "delete_so"].some(keyword => pageName.includes(keyword))
+                        ["input_so", "reduce_order", "additional_order", "release_so", "delete_so","reject_so"].some(keyword => pageName.includes(keyword))
                         ? "nav-item active"
                         : "nav-item"}
                     >
@@ -78,7 +78,7 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                             <i className="mdi mdi-note-plus menu-icon"></i>
                         </a>
                         <div className={
-                            ["input_so", "reduce_order", "additional_order", "release_so", "delete_so"].some(keyword => pageName.includes(keyword))
+                            ["input_so", "reduce_order", "additional_order", "release_so", "delete_so","reject_so"].some(keyword => pageName.includes(keyword))
                             ? "collapse show"
                             : "collapse"} 
                             id="input_so"
@@ -102,6 +102,11 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                                 <li className={pageName === 'release_so' ? "nav-item active" : "nav-item"}>
                                     <Link className="nav-link" to="/release_so">
                                         <span className="menu-title">Release SO</span>
+                                    </Link>
+                                </li>
+                                <li className={pageName === 'reject_so' ? "nav-item active" : "nav-item"}>
+                                    <Link className="nav-link" to="/reject_so">
+                                        <span className="menu-title">Reject SO</span>
                                     </Link>
                                 </li>
                                 <li className={pageName === 'delete_so' ? "nav-item active" : "nav-item"}>

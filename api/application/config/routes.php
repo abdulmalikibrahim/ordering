@@ -78,3 +78,4 @@ $route['get_data_graph'] = 'API/get_data_graph';
 $route['delete_part_so'] = 'API/delete_part_so';
 $route['data_part_master'] = 'API/data_part_master';
 $route['count_remain_release'] = 'API/count_remain_release';
+$route['cancel_approve_so'] = 'API/cancel_approve_so';

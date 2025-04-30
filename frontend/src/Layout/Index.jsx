@@ -47,6 +47,8 @@ const Index = ({children,API_URL}) => {
             setTitleIcon('Release SO', 'mdi mdi-note-plus');
         } else if (pageName === 'delete_so') {
             setTitleIcon('Delete SO', 'mdi mdi-note-plus');
+        } else if (pageName === 'reject_so') {
+            setTitleIcon('Reject SO', 'mdi mdi-note-plus');
         } else if (pageName === "remain_approve"){
             setTitleIcon('SO Remain Approve', 'mdi mdi-information');
         } else if (pageName === "already_approve"){
