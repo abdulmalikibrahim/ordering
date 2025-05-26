@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 11 Apr 2025 pada 10.12
--- Versi server: 10.4.27-MariaDB
--- Versi PHP: 7.4.33
+-- Waktu pembuatan: 21 Bulan Mei 2025 pada 05.11
+-- Versi server: 10.4.24-MariaDB
+-- Versi PHP: 7.4.29
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -35,21 +35,19 @@ CREATE TABLE `account` (
   `password` char(100) NOT NULL,
   `level` int(11) NOT NULL COMMENT '1=Admin,2=User,3=SPV,4=MNG',
   `dept` int(11) NOT NULL,
-  `spv` int(11) DEFAULT NULL,
-  `mng` int(11) DEFAULT NULL,
   `status` enum('0','1') NOT NULL DEFAULT '1'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `account`
 --
 
-INSERT INTO `account` (`id`, `created_date`, `name`, `username`, `password`, `level`, `dept`, `spv`, `mng`, `status`) VALUES
-(1, '2025-04-09 09:46:34', 'ASSY 3 MNG', 'assy3_mng', '$2y$10$KPWTXkrVjzk0LHf/H9aGYO9.K6SY9E5yrgESjdgLP0swWha93UbnW', 4, 1, 0, 0, '1'),
-(2, '2025-04-09 07:31:41', 'ASSY 3 SPV', 'assy3_spv', '$2a$12$xhS4.h8M90RRylhnRT1vYOGy/hN36RS3wObVO9dvXnXAPObcNaHRq', 3, 1, 0, 2, '1'),
-(4, '2025-04-09 09:48:27', 'Abdul Malik Ibrahim', 'malik', '$2y$10$aH5g5DtDUdv6GZTpQzHRLOn7C/1YtpAE19/MIdbhUp.hhNRiT3MhS', 1, 3, 0, 0, '1'),
-(5, '2025-04-09 09:52:17', 'ASSY3 PIC', 'assy3_pic', '$2y$10$ltmivNg3sOB6ecLTJgUVsewgryFDi/5h8Mbj6kO2xNkf/JNExKOZS', 2, 1, 2, 1, '1'),
-(6, '2025-04-09 09:52:36', 'ASSY 4 MNG', 'assy4_mng', '$2y$10$r1l7UQYEiWVfyHWsvXof8.JTDgI6XnJBFcT6gplf1EMR1qQKI8GOi', 4, 2, 0, 0, '1');
+INSERT INTO `account` (`id`, `created_date`, `name`, `username`, `password`, `level`, `dept`, `status`) VALUES
+(1, '2025-04-09 09:46:34', 'ASSY 3 MNG', 'assy3_mng', '$2y$10$KPWTXkrVjzk0LHf/H9aGYO9.K6SY9E5yrgESjdgLP0swWha93UbnW', 4, 1, '1'),
+(2, '2025-04-09 07:31:41', 'ASSY 3 SPV', 'assy3_spv', '$2a$12$xhS4.h8M90RRylhnRT1vYOGy/hN36RS3wObVO9dvXnXAPObcNaHRq', 3, 1, '1'),
+(4, '2025-04-09 09:48:27', 'Abdul Malik Ibrahim', 'malik', '$2y$10$aH5g5DtDUdv6GZTpQzHRLOn7C/1YtpAE19/MIdbhUp.hhNRiT3MhS', 1, 3, '1'),
+(5, '2025-04-09 09:52:17', 'ASSY3 PIC', 'assy3_pic', '$2y$10$ltmivNg3sOB6ecLTJgUVsewgryFDi/5h8Mbj6kO2xNkf/JNExKOZS', 2, 1, '1'),
+(6, '2025-04-09 09:52:36', 'ASSY 4 MNG', 'assy4_mng', '$2y$10$r1l7UQYEiWVfyHWsvXof8.JTDgI6XnJBFcT6gplf1EMR1qQKI8GOi', 4, 2, '1');
 
 -- --------------------------------------------------------
 
@@ -63,16 +61,28 @@ CREATE TABLE `data_order` (
   `created_time` datetime NOT NULL DEFAULT current_timestamp(),
   `created_by` int(11) NOT NULL,
   `pic` int(11) DEFAULT NULL,
-  `spv_sign` int(11) NOT NULL,
+  `spv_sign` int(11) DEFAULT NULL,
   `spv_sign_time` datetime DEFAULT NULL,
-  `mng_sign` int(11) NOT NULL,
+  `mng_sign` int(11) DEFAULT NULL,
   `mng_sign_time` datetime DEFAULT NULL,
   `release_sign` int(11) DEFAULT NULL,
   `release_sign_time` datetime DEFAULT NULL,
   `so_number` char(100) NOT NULL,
+  `reject_by` int(11) DEFAULT NULL,
+  `reject_date` date DEFAULT NULL,
+  `reject_reason` text DEFAULT NULL,
   `tipe` enum('upload_so','reduce','additional') NOT NULL DEFAULT 'upload_so',
   `shop_code` char(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data untuk tabel `data_order`
+--
+
+INSERT INTO `data_order` (`id`, `deleted_date`, `created_time`, `created_by`, `pic`, `spv_sign`, `spv_sign_time`, `mng_sign`, `mng_sign_time`, `release_sign`, `release_sign_time`, `so_number`, `reject_by`, `reject_date`, `reject_reason`, `tipe`, `shop_code`) VALUES
+(1, '2025-05-21 08:51:00', '2025-04-25 16:53:47', 4, 5, 2, NULL, 1, NULL, NULL, NULL, 'SO/PCD/KAP/04/2025/001', 2, '2025-04-30', 'TEST REJECT\r\n1\r\n2\r\n3', 'upload_so', 'ASSY3'),
+(2, NULL, '2025-04-25 16:54:01', 4, 5, 2, '2025-05-21 08:42:54', 1, '2025-05-21 08:43:39', 4, '2025-05-21 08:45:21', 'SO/PCD/KAP/04/2025/002', NULL, NULL, NULL, 'upload_so', 'ASSY3'),
+(3, NULL, '2025-05-21 08:41:59', 4, 5, 2, '2025-05-21 08:43:01', 1, NULL, NULL, NULL, 'SO/PCD/KAP/05/2025/001', 1, '2025-05-21', 'SO Mulu bgst', 'upload_so', 'ASSY3');
 
 -- --------------------------------------------------------
 
@@ -90,7 +100,20 @@ CREATE TABLE `data_part_order` (
   `vendor_code` char(50) NOT NULL,
   `qty_kanban` int(11) NOT NULL,
   `remarks` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data untuk tabel `data_part_order`
+--
+
+INSERT INTO `data_part_order` (`id`, `deleted_date`, `so_number`, `tgl_delivery`, `shop_code`, `part_number`, `vendor_code`, `qty_kanban`, `remarks`) VALUES
+(1, '2025-05-21 08:51:00', 'SO/PCD/KAP/04/2025/001', '2025-03-20', 'ASSY3', '33504-BZ010-B0', '1000001', 5, ''),
+(2, '2025-05-21 08:51:00', 'SO/PCD/KAP/04/2025/001', '2025-03-20', 'ASSY3', '33504-BZ120-C0', '1000001', 5, ''),
+(3, '2025-05-21 08:51:00', 'SO/PCD/KAP/04/2025/001', '2025-03-20', 'ASSY3', '33504-BZ180-C0', '1000001', 5, ''),
+(4, NULL, 'SO/PCD/KAP/04/2025/002', '2025-03-20', 'ASSY3', '33504-BZ010-B0', '1000001', 5, ''),
+(5, NULL, 'SO/PCD/KAP/04/2025/002', '2025-03-20', 'ASSY3', '33504-BZ120-C0', '1000001', 5, ''),
+(6, NULL, 'SO/PCD/KAP/04/2025/002', '2025-03-20', 'ASSY3', '33504-BZ180-C0', '1000001', 5, ''),
+(7, NULL, 'SO/PCD/KAP/05/2025/001', '2025-03-20', 'ASSY3', '33504-BZ010-B0', '1000001', 5, 'Contoh');
 
 -- --------------------------------------------------------
 
@@ -102,7 +125,7 @@ CREATE TABLE `departement` (
   `id` int(11) NOT NULL,
   `name` char(100) NOT NULL,
   `shop_code` char(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `departement`
@@ -129,7 +152,7 @@ CREATE TABLE `master` (
   `vendor_site_alias` char(150) DEFAULT NULL,
   `job_no` char(50) DEFAULT NULL,
   `remark` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `master`
@@ -13325,13 +13348,13 @@ ALTER TABLE `account`
 -- AUTO_INCREMENT untuk tabel `data_order`
 --
 ALTER TABLE `data_order`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `data_part_order`
 --
 ALTER TABLE `data_part_order`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT untuk tabel `departement`

@@ -29,6 +29,24 @@
     <!-- End layout styles -->
     <link rel="shortcut icon" href="%PUBLIC_URL%assets/images/favicon.png" />
     <title>Ordering Apps</title>
+    <style>
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+
+        #print-area,
+        #print-area * {
+          visibility: visible;
+        }
+
+        #print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

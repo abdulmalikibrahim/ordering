@@ -54,4 +54,13 @@ class model extends CI_Model
 			return $this->db->get()->row();
 		}
 	}
+	public function join3_data($table1, $table2, $table3, $join1, $join2, $select, $where, $status)
+	{
+		$this->db->select($select);
+		$this->db->from($table1); 
+		$this->db->join($table2, $join1, 'left');
+		$this->db->join($table3, $join2, 'left');
+		$this->db->where($where);
+		return $this->db->get()->$status();
+	}
 }

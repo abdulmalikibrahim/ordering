@@ -11,7 +11,6 @@ const CountRemainRelease = () => {
             const response = await axios.get(`${API_URL}/count_remain_release`, {
                 withCredentials: true
             })
-            console.log(response)
             if(response?.status === 200){
                 setCountRemainRelease(response.data.res)
             }

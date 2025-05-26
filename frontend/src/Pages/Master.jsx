@@ -74,12 +74,18 @@ const FormUpload = ({ API_URL, setreloadTable }) => {
             setUploading(false);
         }
     };
+
+    useEffect(() => {
+        setTimeout(() => {
+            setMessage("");
+        }, 2000);
+    },[message])
   
     return (
         <div className="row">
-            <div className="col-lg-5">
+            <div className="col-lg-6">
                 <div className="row">
-                    <div className="col-lg-10">
+                    <div className="col-lg-8">
                         <input
                             className="form-control"
                             type="file"
@@ -87,8 +93,9 @@ const FormUpload = ({ API_URL, setreloadTable }) => {
                             onChange={handleFileChange}
                             accept=".xlsx"
                         />
+                        <p className="mt-2 mb-2">Download template klik <a href="/assets/form/FormMaster.xlsx">disini</a></p>
                     </div>
-                    <div className="col-lg-2">
+                    <div className="col-lg-4">
                         <button
                             className="btn btn-primary"
                             onClick={handleUpload}
@@ -96,6 +103,7 @@ const FormUpload = ({ API_URL, setreloadTable }) => {
                         >
                             {uploading ? "Uploading..." : "Upload"}
                         </button>
+                        <a href={`${API_URL}/export_master`} target="_blank" className="btn btn-success ms-2">Download</a>
                     </div>
                 </div>
             </div>
@@ -111,6 +119,7 @@ const Table = ({API_URL, reloadTable}) => {
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const { numberFormat } = useGlobal();
   
     useEffect(() => {
         fetchData();
@@ -153,6 +162,8 @@ const Table = ({API_URL, reloadTable}) => {
         { name: "Vendor Site", selector: (row) => row.vendor_site, sortable: true },
         { name: "Vendor Site Alias", selector: (row) => row.vendor_site_alias, sortable: true },
         { name: "Job No", selector: (row) => row.job_no, sortable: true },
+        { name: "Qty Packing", selector: (row) => row.std_qty, sortable: true },
+        { name: "Price", selector: (row) => `Rp. ${numberFormat(row.price)}`, sortable: true },
         { name: "Remark", selector: (row) => row.remark, sortable: true },
     ];
   

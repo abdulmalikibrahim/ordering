@@ -9,6 +9,7 @@ import Form from 'react-bootstrap/Form';
 import ModalDetailPart from '../Component/ModalDetailPart';
 import { useGlobal } from '../GlobalContext';
 import SelectBoxPIC from '../Component/SelectBoxPIC';
+import ModalPrintSO from '../Component/ModalPrintSO';
 
 const customStyles = {
     headCells: {
@@ -36,7 +37,14 @@ const Input_SO = ({API_URL}) => {
     const [titleTable, settitleTable] = useState("");
     const [modeInput, setmodeInput] = useState("");
     const [showModalDetail, setShowModalDetail] = useState(false);
+    const [showModalPrint, setShowModalPrint] = useState(false);
     const [detailPart, setDetailPart] = useState([]);
+    const [tglDelivery, setTglDelivery] = useState("");
+    const [shopCodeDetail, setShopCodeDetail] = useState("");
+    const [totalPrice, setTotalPrice] = useState("");
+    const [statusSO, setStatusSO] = useState("");
+    const [rejectReason, setRejectReason] = useState("");
+    const [soNumberPick, setSoNumberPick] = useState("");
     const [loadingDetailPart, setLoadingDetailPart] = useState(true);
     
     const ShowPart = async (so_number) => {
@@ -44,7 +52,13 @@ const Input_SO = ({API_URL}) => {
         setLoadingDetailPart(true);
         try {
             const response = await axios.get(`${API_URL}/get_detail_part_so?so_number=${so_number}`);
-            const data = Array.isArray(response.data) ? response.data : [];
+            const data = Array.isArray(response.data.data) ? response.data.data : [];
+            setShopCodeDetail(response.data.shop_code);
+            setTglDelivery(response.data.tgl_delivery);
+            setSoNumberPick(so_number);
+            setTotalPrice(response.data.grandTotal);
+            setStatusSO(response.data.status_so);
+            setRejectReason(response.data.reason_reject);
             setDetailPart(data);
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -90,7 +104,16 @@ const Input_SO = ({API_URL}) => {
                     </div> 
                 }
                 <div className="col-12">
-                    <Table API_URL={API_URL} reloadTable={reloadTable} setreloadTable={setreloadTable} titleTable={titleTable} modeInput={modeInput} ShowPart={ShowPart} />
+                    <Table 
+                        API_URL={API_URL} 
+                        reloadTable={reloadTable} 
+                        setreloadTable={setreloadTable} 
+                        titleTable={titleTable} 
+                        modeInput={modeInput} 
+                        ShowPart={ShowPart} 
+                        setShowModalPrint={setShowModalPrint} 
+                        setSoNumberPick={setSoNumberPick}
+                    />
                 </div>
             </div>
             <FormAdd handleClose={handleClose} show={show} API_URL={API_URL} setreloadTable={setreloadTable} modeInput={modeInput} />
@@ -104,12 +127,25 @@ const Input_SO = ({API_URL}) => {
                 API_URL={API_URL}
                 ShowPart={ShowPart}
                 setreloadTable={setreloadTable}
+                tglDelivery={tglDelivery}
+                shopCode={shopCodeDetail}
+                soNumber={soNumberPick}
+                totalPrice={totalPrice}
+                statusSO={statusSO}
+                rejectReason={rejectReason}
+            />
+
+            <ModalPrintSO
+                show={showModalPrint}
+                handleClose={() => setShowModalPrint(false)}
+                API_URL={API_URL}
+                soNumber={soNumberPick}
             />
         </Index>
     )
 }
 
-const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, ShowPart}) => {
+const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, ShowPart, setShowModalPrint, setSoNumberPick}) => {
     const {setReloadCountRemain} = useGlobal();
     const {levelAccount} = useGlobal();
     const [data, setData] = useState([]);
@@ -163,6 +199,11 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
             console.error("Error fetching data:", error);
         }
     };
+
+    const showModalPrintSO = (so_number) => {
+        setShowModalPrint(true);
+        setSoNumberPick(so_number);
+    }
   
     useEffect(() => {
         fetchData();
@@ -204,6 +245,8 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
         return(
             <>
                 <Button variant="danger" className="me-2 btn-sm" title="Hapus" onClick={() => ClickDelete(props.data.so_number)}><i className="fas fa-trash-alt"></i></Button>
+                
+                <Button variant="info" className="me-2 btn-sm" onClick={() => showModalPrintSO(props.data.so_number)} title='Print'><i className="fas fa-print"></i></Button>
             </>
         )
     }
@@ -435,10 +478,22 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                     ), selector: (row) =>  
                 <>
                 {
-                    row.spv_sign_time && row.mng_sign_time 
+                    row.spv_sign_time && row.mng_sign_time
                     ? 
                     (levelAccount === "1" && row.release_sign_time === ""
-                        ? <Button variant="success" className="me-2 btn-sm" title="Release" onClick={() => ClickRelease(row.so_number)} style={{fontSize:'9pt'}}><i className="fas fa-check"></i> Release</Button> 
+                        ? 
+                        (row.reject_date 
+                            ? <span className="badge badge-danger text-dark mt-1">Canceled</span> 
+                            : <Button 
+                                variant="success" 
+                                className="me-2 btn-sm" 
+                                title="Release" 
+                                onClick={() => ClickRelease(row.so_number)} 
+                                style={{fontSize:'9pt'}}
+                                >
+                                    <i className="fas fa-check"></i> Release
+                                </Button>
+                        ) 
                         : (!row.release_sign_time ? <span className="badge badge-warning text-dark mt-1">Waiting Release</span> : <>{row.release_sign}<br /><span className="badge badge-success text-dark mt-1">{row.release_sign_time}</span></>) 
                     )
                     : <span className="badge badge-warning text-dark mt-1">Waiting Approval</span> 

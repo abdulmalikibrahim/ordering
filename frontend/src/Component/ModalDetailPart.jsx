@@ -4,6 +4,7 @@ import Button from 'react-bootstrap/Button';
 import DataTable from 'react-data-table-component';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useGlobal } from '../GlobalContext';
 
 const ButtonAction = ({...props}) => {
     const ClickDelete = (id) => {
@@ -45,17 +46,18 @@ const ButtonAction = ({...props}) => {
     )
 }
 
-const ModalDetailPart = ({ show, handleClose, data, loadingDetailPart, customStyles, API_URL, setreloadTable, ShowPart }) => {
+const ModalDetailPart = ({ show, handleClose, data, loadingDetailPart, customStyles, API_URL, setreloadTable, ShowPart, tglDelivery, shopCode, soNumber, totalPrice, statusSO, rejectReason }) => {
+    const { numberFormat } = useGlobal();
     const columns = [
         { name: 'No', selector: (row, index) => index + 1, width: '60px' },
-        { name: 'Tgl Delivery', selector: row => row.tgl_delivery },
-        { name: 'Shop Code', selector: row => row.shop_code },
         { name: 'Part Number', selector: row => row.part_number, width: '150px' },
         { name: 'Part Name', selector: row => row.part_name, width: '250px' },
         { name: 'Job No', selector: row => row.job_no },
         { name: 'Vendor Code', selector: row => row.vendor_code },
         { name: 'Vendor Name', selector: row => row.vendor_name },
-        { name: 'Qty Kanban', selector: row => row.qty_kanban },
+        { name: 'Qty', selector: row => row.qty_kanban },
+        { name: 'Total Qty', selector: row => row.total_qty },
+        { name: 'Price', selector: row => `Rp. ${numberFormat(row.total_price)}` },
         { name: "Action", selector: (row) => 
             <ButtonAction data={row} API_URL={API_URL} setreloadTable={setreloadTable} ShowPart={ShowPart} />, 
         sortable: true },
@@ -68,6 +70,32 @@ const ModalDetailPart = ({ show, handleClose, data, loadingDetailPart, customSty
             </Modal.Header>
             <Modal.Body>
                 {
+                    <>
+                        <div className="row">
+                            <div className="col-lg-6">
+                                <h6 style={{ fontFamily:"calibri" }}>
+                                    {soNumber}
+                                    {
+                                        statusSO === "Reject"
+                                        ? <span className='ms-1 badge badge-danger'>{statusSO}</span>
+                                        : (statusSO === "Release" ? <span className='ms-1 badge badge-success'>{statusSO}</span> : <span className='ms-1 badge badge-warning'>{statusSO}</span>)
+                                    }
+                                </h6>
+                            </div>
+                            <div className="col-lg-6 text-end"><h6 style={{fontFamily:"calibri"}}>{shopCode}, Delivery at : {tglDelivery}</h6></div>
+                            <div className="col-lg-6">
+                                
+                                {
+                                    rejectReason && <p>Reason Reject : {rejectReason}</p>
+                                }
+                            </div>
+                            <div className="col-lg-6 text-end mb-2">
+                                <a href={`${API_URL}/export_detail_part?so=${soNumber}`} target='_blank' className="btn btn-sm btn-success">Download</a>
+                            </div>
+                        </div>
+                    </>
+                }
+                {
                     loadingDetailPart 
                     ?   <div className="text-center">
                             <i className="fas fa-spinner fa-spin"></i> Loading...
@@ -79,6 +107,10 @@ const ModalDetailPart = ({ show, handleClose, data, loadingDetailPart, customSty
                             dense
                             customStyles={customStyles}
                         />
+                }{
+                    <div className="row mt-3">
+                        <div className="col-lg-12 text-end"><h4>Total Price : Rp. {numberFormat(totalPrice)}</h4></div>
+                    </div>
                 }
             </Modal.Body>
             <Modal.Footer>

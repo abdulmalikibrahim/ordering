@@ -21,7 +21,6 @@ const NavBar = ({API_URL,handleLogout}) => {
             if(response.status === 202){
                 navigate('/')
             }else if(response.status === 200){
-                console.log(response.data);
                 setLevelAccount(response.data.level)
                 setIdAccount(response.data.id_user)
                 setNameAccount(response.data.name)

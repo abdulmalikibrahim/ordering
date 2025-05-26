@@ -1,6 +1,8 @@
 api/application/config/config.php
 api/application/config/constants.php
 api/application/config/database.php
+api/application/config/email.php
+api/uploads/*
 api/application/cache
 api/application/logs
 api/vendor

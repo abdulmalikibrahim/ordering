@@ -230,9 +230,9 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
             formdata.append('level', level);
             formdata.append('mode', mode);
 
-            console.log("Data yang dikirim ke backend:", {
-                idUpdate, name, username, password, dept, level, spv, mng, mode
-            });
+            // console.log("Data yang dikirim ke backend:", {
+            //     idUpdate, name, username, password, dept, level, spv, mng, mode
+            // });
 
             const response = await axios.post(`${API_URL}/save_account`, formdata);
             if (response.status === 200) {

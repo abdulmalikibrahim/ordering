@@ -10,6 +10,25 @@ export const GlobalProvider = ({ children }) => {
     const [levelNameAccount, setLevelNameAccount] = useState('')
     const [reloadCountRemain, setReloadCountRemain] = useState(0)
     const API_URL = process.env.REACT_APP_API_URL;
+    
+    const numberFormat = (num) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'decimal',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+        }).format(num)
+    }
+
+    const formatDateIndo = (dateString) => {
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = date.toLocaleString('default', { month: 'short' }); // 'May'
+        const year = date.getFullYear();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const mins = date.getMinutes().toString().padStart(2, '0');
+        const secs = date.getSeconds().toString().padStart(2, '0');
+        return `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
+    };
 
     return (
         <GlobalContext.Provider
@@ -26,7 +45,9 @@ export const GlobalProvider = ({ children }) => {
             setLevelNameAccount,
             reloadCountRemain,
             setReloadCountRemain,
-            API_URL
+            API_URL,
+            numberFormat,
+            formatDateIndo
         }}>
             {children}
         </GlobalContext.Provider>

@@ -11,7 +11,6 @@ const CountRemainSO = () => {
             const response = await axios.get(`${API_URL}/count_remain_approve`, {
                 withCredentials: true
             })
-            console.log(response)
             if(response?.status === 200){
                 setCountRemainSO(response.data.res)
             }

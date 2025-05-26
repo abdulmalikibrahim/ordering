@@ -1,11 +1,18 @@
 <?php
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 require_once FCPATH . 'vendor/autoload.php';
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Picqer\Barcode\BarcodeGeneratorHTML;
 use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class API extends MY_Controller {
 
@@ -47,7 +54,9 @@ class API extends MY_Controller {
                     'vendor_site' => $sheet->getCell('E' . $row)->getValue(),
                     'vendor_site_alias' => $sheet->getCell('F' . $row)->getValue(),
                     'job_no' => $sheet->getCell('G' . $row)->getValue(),
-                    'remark' => $sheet->getCell('H' . $row)->getValue()
+                    'std_qty' => $sheet->getCell('H' . $row)->getValue(),
+                    'price' => $sheet->getCell('I' . $row)->getValue(),
+                    'remark' => $sheet->getCell('J' . $row)->getValue()
                 ];
             }
         }
@@ -328,7 +337,7 @@ class API extends MY_Controller {
                 $data = $this->model->gd(
                     "data_order",
                     "*", 
-                    "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND release_sign IS NULL ORDER BY created_time DESC",
+                    "deleted_date IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND reject_date IS NULL AND release_sign IS NULL AND id != '' ORDER BY created_time DESC",
                     "result"
                 );
             }else if($tipe == "reject_so"){
@@ -445,25 +454,50 @@ class API extends MY_Controller {
 
         function get_detail_part_so()
         {
+            $grand_total = 0;
             $so_number = $this->input->get("so_number");
-            $data = $this->model->gd("data_part_order","*", "deleted_date IS NULL AND so_number = '$so_number'" ,"result");
+            $data = $this->model->join3_data("data_part_order a","master b","data_order c","a.part_number=b.part_number AND a.vendor_code=b.vendor_code","a.so_number=c.so_number","a.*,b.part_name,b.vendor_site_alias,b.job_no,b.std_qty,(a.qty_kanban* b.std_qty*b.price) as total_price,c.spv_sign_time,c.mng_sign_time,c.release_sign_time,c.reject_date,c.reject_reason", "a.deleted_date IS NULL AND a.so_number = '$so_number'" ,"result");
             $newData = [];
             if (!empty($data)) {
                 foreach ($data as $row) {
-                    $detail_part = $this->model->gd("master","part_name,vendor_site_alias,job_no","part_number = '$row->part_number' AND vendor_code = '$row->vendor_code'","row");
-                    $newData[] = [
+                    $newData["data"][] = [
                         "id" => $row->id,
                         "so_number" => $row->so_number,
-                        "tgl_delivery" => empty($row->tgl_delivery) ? "" : date("d-M-Y",strtotime($row->tgl_delivery)),
-                        "shop_code" => $row->shop_code,
                         "part_number" => $row->part_number,
-                        "part_name" => $detail_part->part_name,
+                        "part_name" => $row->part_name,
                         "vendor_code" => $row->vendor_code,
-                        "vendor_name" => $detail_part->vendor_site_alias,
+                        "vendor_name" => $row->vendor_site_alias,
+                        "total_qty" => $row->std_qty*$row->qty_kanban,
+                        "total_price" => $row->total_price,
                         "qty_kanban" => $row->qty_kanban,
-                        "job_no" => $detail_part->job_no,
+                        "job_no" => $row->job_no,
                     ];
+                    $grand_total += $row->total_price;
                 }
+
+                $status_so = '';
+                $reason_reject = '';
+                if(empty($row->spv_sign_time)){
+                    $status_so = 'Waiting SPV';
+                }
+                if(!empty($row->spv_sign_time)){
+                    $status_so = 'Waiting MNG';
+                }
+                if(!empty($row->mng_sign_time)){
+                    $status_so = 'Waiting Release';
+                }
+                if(!empty($row->release_sign_time)){
+                    $status_so = 'Release';
+                }
+                if(!empty($row->reject_date)){
+                    $status_so = 'Reject';
+                    $reason_reject = $row->reject_reason;
+                }
+                $newData["tgl_delivery"] = empty($row->tgl_delivery) ? "" : date("d-M-Y",strtotime($row->tgl_delivery));
+                $newData["shop_code"] = $row->shop_code;
+                $newData["grandTotal"] = $grand_total;
+                $newData["status_so"] = $status_so;
+                $newData["reason_reject"] = $reason_reject;
             }
             $this->fb($newData);   
         }
@@ -758,7 +792,7 @@ class API extends MY_Controller {
         $data = $this->model->gd(
             "data_order",
             "COUNT(*) as total", 
-            "deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND release_sign IS NULL",
+            "deleted_date IS NULL AND reject_by IS NULL AND spv_sign_time IS NOT NULL AND mng_sign_time IS NOT NULL AND reject_date IS NULL AND release_sign IS NULL",
             "row"
         );
         $fb = ["statusCode" => 200, "res" => $data->total];
@@ -1120,20 +1154,68 @@ class API extends MY_Controller {
         $periode = $year."-".sprintf("%02d",$month)."-";
         
         $pic_filter = $pic == "all" ? "" : "AND pic = '$pic'";
+        $pic_filter_price = $pic == "all" ? "" : "AND a.pic = '$pic'";
         $data_bar = [];
+        $data_price = [];
+        $total_price = 0;
+        
+        $query = "deleted_date IS NULL AND reject_date IS NULL AND created_time LIKE '%".$periode."%' AND tipe = '$type' $pic_filter";
+        $data = $this->model->gd(
+            "data_order",
+            "COUNT(CASE WHEN spv_sign_time IS NULL THEN 1 END) AS spv_pending,
+            COUNT(CASE WHEN mng_sign_time IS NULL THEN 1 END) AS mng_pending,
+            COUNT(CASE WHEN release_sign_time IS NULL THEN 1 END) AS release_pending",
+            $query,
+            "row"
+        );
+
+        $data_status = [
+            [
+                "name" => "Supervisor",
+                "value" => intval($data->spv_pending),
+            ],
+            [
+                "name" => "Manager",
+                "value" => intval($data->mng_pending),
+            ],
+            [
+                "name" => "Release",
+                "value" => intval($data->release_pending),
+            ]
+        ];
+
         for ($i=1; $i <=31 ; $i++) {
             $query = "deleted_date IS NULL AND created_time LIKE '%".$periode.sprintf("%02d",$i)."%' AND tipe = '$type' $pic_filter";
             $data = $this->model->gd("data_order","COUNT(*) as total",$query,"row");
+            
+            $query_price = "deleted_date IS NULL AND created_time LIKE '%".$periode.sprintf("%02d",$i)."%' AND tipe = '$type' $pic_filter";
+            $get_price = $this->model->join3_data(
+                "data_part_order b",
+                "data_order a",
+                "master c",
+                "b.so_number=a.so_number",
+                "b.part_number=c.part_number AND b.vendor_code=c.vendor_code",
+                "SUM(b.qty_kanban * c.std_qty * c.price) as total_price",
+                "a.deleted_date IS NULL AND a.reject_date IS NULL AND a.created_time LIKE '%".$periode.sprintf("%02d",$i)."%' AND a.tipe = '$type' $pic_filter GROUP BY b.so_number",
+                "row"
+            );
+            
+            
             $data_bar[] = [
                 "name" => "$i",
                 "value" => intval($data->total),
-                "ket" => $query,
+            ];
+            
+            $total_price += !empty($get_price->total_price) ? intval($get_price->total_price) : 0;
+            $data_price[] = [
+                "name" => "$i",
+                "value" => $total_price,
             ];
         }
 
-        $reject = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND reject_by IS NOT NULL AND MONTH(created_time) = '$month' AND YEAR(created_time) = '$year' AND tipe = '$type'","row");
-        $approve = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND spv_sign IS NOT NULL AND release_sign IS NULL AND MONTH(created_time) = '$month' AND YEAR(created_time) = '$year' AND tipe = '$type'","row");
-        $release = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND release_sign IS NOT NULL AND MONTH(created_time) = '$month' AND YEAR(created_time) = '$year' AND tipe = '$type'","row");
+        $reject = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND reject_by IS NOT NULL AND MONTH(created_time) = '$month' AND YEAR(created_time) = '$year' AND tipe = '$type' $pic_filter","row");
+        $approve = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND reject_by IS NULL AND spv_sign IS NOT NULL AND release_sign IS NULL AND MONTH(created_time) = '$month' AND YEAR(created_time) = '$year' AND tipe = '$type' $pic_filter","row");
+        $release = $this->model->gd("data_order","COUNT(*) as total","deleted_date IS NULL AND release_sign IS NOT NULL AND MONTH(created_time) = '$month' AND YEAR(created_time) = '$year' AND tipe = '$type' $pic_filter","row");
         
         $data_pie = [
             [
@@ -1142,7 +1224,7 @@ class API extends MY_Controller {
                 "fill" => "#f55656"
             ],
             [
-                "name" => "Approve",
+                "name" => "Appproval",
                 "value" => intval($approve->total),
                 "fill" => "#5693f5"
             ],
@@ -1153,7 +1235,7 @@ class API extends MY_Controller {
             ]
         ];
 
-        $fb = ["statusCode" => 200, "res" => ["bar" => $data_bar, "pie" => $data_pie]];
+        $fb = ["statusCode" => 200, "res" => ["bar" => $data_bar, "price" => $data_price, "pie" => $data_pie, "status" => $data_status]];
         $this->fb($fb);
     }
 
@@ -1182,5 +1264,297 @@ class API extends MY_Controller {
         $this->model->update("data_order","so_number = '$so_number'",$data_input);
         $fb = ["statusCode" => 200, "res" => "Proses berhasil di lakukan"];
         $this->fb($fb);
+    }
+
+    function export_master()
+    {
+        $data_master = $this->model->gd("master","*","id !=","result");
+
+        // Buat objek Spreadsheet baru
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Isi data contoh
+        $sheet->setCellValue('A1', 'Part Number');
+        $sheet->setCellValue('B1', 'Part Name');
+        $sheet->setCellValue('C1', 'Vendor Code');
+        $sheet->setCellValue('D1', 'Vendor Name');
+        $sheet->setCellValue('E1', 'Vendor Site');
+        $sheet->setCellValue('F1', 'Vendor Site Alias');
+        $sheet->setCellValue('G1', 'Job No');
+        $sheet->setCellValue('H1', 'Qty Packing');
+        $sheet->setCellValue('I1', 'Price');
+        $sheet->setCellValue('J1', 'Remark');
+        
+        $row = 2;
+        foreach ($data_master as $data) {
+            $sheet->setCellValue('A' . $row, $data->part_number);
+            $sheet->setCellValue('B' . $row, $data->part_name);
+            $sheet->setCellValue('C' . $row, $data->vendor_code);
+            $sheet->setCellValue('D' . $row, $data->vendor_name);
+            $sheet->setCellValue('E' . $row, $data->vendor_site);
+            $sheet->setCellValue('F' . $row, $data->vendor_site_alias);
+            $sheet->setCellValue('G' . $row, $data->job_no);
+            $sheet->setCellValue('H' . $row, $data->std_qty);
+            $sheet->setCellValue('I' . $row, $data->price);
+            $sheet->setCellValue('J' . $row, $data->remark);
+            $row++;
+        }
+
+        // STYLE HEADER (baris 1)
+        $headerRange = 'A1:J1';
+        $sheet->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle($headerRange)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFC000');
+
+        // STYLE kolom A (selain header) jadi center
+        $lastRow = $row - 1;
+        $sheet->getStyle("A2:J$lastRow")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("B2:B$lastRow")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle("D2:D$lastRow")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+        // BORDER di semua sel terisi (A1:C lastRow)
+        $allRange = "A1:J$lastRow";
+        $sheet->getStyle($allRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+        // AUTO WIDTH kolom berdasarkan isi
+        foreach (range('A', 'J') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Header agar browser mendownload file Excel
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="Data_Master.xlsx"');
+        header('Cache-Control: max-age=0');
+
+        // Buat writer dan output ke php://output supaya langsung terdownload
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    function export_detail_part()
+    {
+        $so = $this->input->get("so");
+        $data_part = $this->model->join_data(
+            "data_part_order a",
+            "master b",
+            "a.part_number=b.part_number AND a.vendor_code=b.vendor_code",
+            "a.shop_code,a.tgl_delivery,a.qty_kanban,a.remarks as remark_part,b.*",
+            "so_number = '$so'",
+            "result"
+        );
+
+        // Buat objek Spreadsheet baru
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Isi data contoh
+        $sheet->setCellValue('A1', 'No');
+        $sheet->setCellValue('B1', 'Shop Code');
+        $sheet->setCellValue('C1', 'Tgl Delivery');
+        $sheet->setCellValue('D1', 'Part Number');
+        $sheet->setCellValue('E1', 'Part Name');
+        $sheet->setCellValue('F1', 'Vendor Code');
+        $sheet->setCellValue('G1', 'Vendor Name');
+        $sheet->setCellValue('H1', 'Job No');
+        $sheet->setCellValue('I1', 'Qty');
+        $sheet->setCellValue('J1', 'Qty Packing');
+        $sheet->setCellValue('K1', 'Price');
+        $sheet->setCellValue('L1', 'Remark');
+        
+        $row = 2;
+        $total_price = 0;
+        foreach ($data_part as $data) {
+            $sheet->setCellValue('A' . $row, $row - 1);
+            $sheet->setCellValue('B' . $row, $data->shop_code);
+            $sheet->setCellValue('C' . $row, $data->tgl_delivery);
+            $sheet->setCellValue('D' . $row, $data->part_number);
+            $sheet->setCellValue('E' . $row, $data->part_name);
+            $sheet->setCellValue('F' . $row, $data->vendor_code);
+            $sheet->setCellValue('G' . $row, $data->vendor_name);
+            $sheet->setCellValue('H' . $row, $data->job_no);
+            $sheet->setCellValue('I' . $row, $data->qty_kanban);
+            $sheet->setCellValue('J' . $row, ($data->qty_kanban * $data->std_qty));
+            $sheet->setCellValue('K' . $row, ($data->std_qty * $data->price));
+            $sheet->setCellValue('L' . $row, $data->remark_part);
+            $total_price += ($data->std_qty * $data->price);
+            $row++;
+        }
+        $sheet->setCellValue('J' . $row, "TOTAL PRICE");
+        $sheet->setCellValue('K' . $row, $total_price);
+
+        // STYLE HEADER (baris 1)
+        $headerRange = 'A1:L1';
+        $sheet->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle($headerRange)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFC000');
+
+        // STYLE kolom A (selain header) jadi center
+        $lastRow = $row - 1;
+        $lastRow1 = $row + 1;
+        $sheet->getStyle("A2:L$lastRow1")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("E2:E$lastRow1")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+        // BORDER di semua sel terisi (A1:C lastRow)
+        $allRange = "A1:L$lastRow";
+        $sheet->getStyle($allRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        
+        // FORMAT CURRENCY untuk kolom K
+        $sheet->getStyle("K2:K$lastRow1")
+            ->getNumberFormat()
+            ->setFormatCode('"Rp "#,##0');
+
+        // AUTO WIDTH kolom berdasarkan isi
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Header agar browser mendownload file Excel
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="'.$so.'.xlsx"');
+        header('Cache-Control: max-age=0');
+
+        // Buat writer dan output ke php://output supaya langsung terdownload
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    function send_email()
+    {
+        $to = $this->input->post("to");
+        $subject = $this->input->post("subject");
+        $body = $this->input->post("body");
+        $file = $this->input->post("file");
+        
+        $curl = curl_init();
+
+        $data = [
+            "sender" => [
+                "name" => EMAIL_NAME,
+                "email" => EMAIL_SENDER
+            ],
+            "to" => [[
+                "email" => $to
+            ]],
+            "subject" => $subject,
+            "htmlContent" => $body
+        ];
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => EMAIL_API_URL,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                "accept: application/json",
+                "api-key: ".EMAIL_API_KEY,
+                "content-type: application/json"
+            ],
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $fb = ["statusCode" => 500, "res" => $err];
+        } else {
+            $fb = ["statusCode" => 200, "timesend" => date("Y-m-d H:i:s"), "to" => $to, "subject" => $subject, "res" => "Kirim email berhasil"];
+        }
+        $this->fb($fb);
+    }
+
+    function get_detail_so($return = "json", $so_number = "")
+    {
+        if(empty($so_number)){
+            $so_number = $this->input->get("so_number");
+        }
+        $data_so = $this->model->gd("data_order","*","so_number = '$so_number'","row");
+        $created_by = $this->model->gd("account","name","id = '".$data_so->created_by."'","row");
+        $pic = $this->model->gd("account","name","id = '".$data_so->pic."'","row");
+        $spv_sign = $this->model->gd("account","name","id = '".$data_so->spv_sign."'","row");
+        $mng_sign = $this->model->gd("account","name","id = '".$data_so->mng_sign."'","row");
+        $reject_by = $this->model->gd("account","name","id = '".$data_so->reject_by."'","row");
+        
+        if(!empty($data_so->release_sign)){
+            $release_sign = $this->model->gd("account","name","id = '".$data_so->release_sign."'","row");
+        }else{
+            $release_sign = (object) [
+                "name" => ""
+            ];
+        }
+        $detail_part_so = $this->model->join_data(
+            "data_part_order a",
+            "master b",
+            "a.part_number=b.part_number AND a.vendor_code=b.vendor_code",
+            "a.shop_code,a.tgl_delivery,a.qty_kanban,a.remarks as remark_part,b.*,(a.qty_kanban * b.std_qty) as qty_packing,(a.qty_kanban * b.std_qty * b.price) as total_price",
+            "so_number = '$so_number'",
+            "result"
+        );
+
+        $grand_total_price = 0;
+        $grand_total_req_kbn = 0;
+        $grand_total_req_pcs = 0;
+        if(!empty($detail_part_so)){
+            foreach ($detail_part_so as $part) {
+                $grand_total_price += $part->total_price;
+                $grand_total_req_kbn += $part->qty_kanban;
+                $grand_total_req_pcs += ($part->qty_kanban * $part->std_qty);
+            }
+        }
+
+        $data_res = [
+            "data_so" => $data_so,
+            "detail_part_so" => $detail_part_so,
+            "created_by" => $created_by->name,
+            "pic" => $pic->name,
+            "spv_sign" => $spv_sign->name,
+            "mng_sign" => $mng_sign->name,
+            "release_sign" => $release_sign->name,
+            "reject_by" => !empty($reject_by->name) ? $reject_by->name : "",
+            "ttd_pic" => !empty($data_so->created_time) ? ($pic->name.",".$data_so->created_time) : "",
+            "ttd_spv_sign" => !empty($data_so->spv_sign_time) ? ($spv_sign->name.",".$data_so->spv_sign_time) : "",
+            "ttd_mng_sign" => !empty($data_so->mng_sign_time) ? ($mng_sign->name.",".$data_so->mng_sign_time) : "",
+            "ttd_release_sign" => !empty($data_so->release_sign_time) ? ($release_sign->name.",".$data_so->release_sign_time) : "",
+            "grand_total_price" => $grand_total_price,
+            "grand_total_req_kbn" => $grand_total_req_kbn,
+            "grand_total_req_pcs" => $grand_total_req_pcs
+        ];
+
+        if($return == "json"){
+            $this->fb($data_res); 
+        }else{
+            return $data_res;
+        }
+    }
+
+    function print_so()
+    {
+        $so_number = $this->input->get("so_number");
+        $download = $this->input->get("download");
+        $data_so = $this->get_detail_so("array");
+        if(empty($data_so)){
+            $fb = ["statusCode" => 404, "res" => "Data SO tidak ditemukan"];
+            $this->fb($fb);
+        }
+
+        $html = $this->load->view("admin/print_so", $data_so, true);
+        
+        if(!empty($download)){
+            // Load Dompdf library
+            $options = new Options();
+            $options->set('isRemoteEnabled', true); // wajib agar bisa load CSS & gambar dari URL
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            
+            // Output the generated PDF
+            ob_end_clean();
+            $dompdf->stream($so_number.".pdf", ["Attachment" => 1]);
+            exit();
+        }else{
+            echo $html;
+        }
     }
 }

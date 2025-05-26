@@ -9,7 +9,6 @@ const Index = ({children,API_URL}) => {
     const [titlePage,settitlePage] = useState('Dashboard')
     const [iconPage,seticonPage] = useState('mdi mdi-home')
     const setTitleIcon = (title,icon) => {
-        console.log(title,icon)
         settitlePage(title)
         seticonPage(icon)
     }

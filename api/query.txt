@@ -23,3 +23,6 @@ ALTER TABLE `account`
   DROP `spv`,
   DROP `mng`;
 ALTER TABLE `data_order` CHANGE `spv_sign` `spv_sign` INT(11) NULL DEFAULT NULL, CHANGE `mng_sign` `mng_sign` INT(11) NULL DEFAULT NULL;
+
+//ADD STD QTY KBN & PRICE AT MASTER
+ALTER TABLE `master` ADD `std_qty` INT NULL AFTER `job_no`, ADD `price` INT NULL AFTER `std_qty`;
