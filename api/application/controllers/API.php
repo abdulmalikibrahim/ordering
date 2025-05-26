@@ -1539,22 +1539,6 @@ class API extends MY_Controller {
         }
 
         $html = $this->load->view("admin/print_so", $data_so, true);
-        
-        if(!empty($download)){
-            // Load Dompdf library
-            $options = new Options();
-            $options->set('isRemoteEnabled', true); // wajib agar bisa load CSS & gambar dari URL
-            $dompdf = new Dompdf($options);
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-            
-            // Output the generated PDF
-            ob_end_clean();
-            $dompdf->stream($so_number.".pdf", ["Attachment" => 1]);
-            exit();
-        }else{
-            echo $html;
-        }
+        echo $html;
     }
 }

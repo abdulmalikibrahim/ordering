@@ -71,9 +71,6 @@ const SO_Print = ({ dataSO }) => {
                         </td>
                     </tr>
                     <tr>
-                        {
-                            console.log(dataSO)
-                        }
                         <td className='border border-dark' style={{fontSize:"8pt"}}>{dataSO.release_sign}</td>
                         <td className='border border-dark' style={{fontSize:"8pt"}}>{dataSO.mng_sign}</td>
                         <td className='border border-dark' style={{fontSize:"8pt"}}>{dataSO.spv_sign}</td>

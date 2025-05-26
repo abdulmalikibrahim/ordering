@@ -241,13 +241,17 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                 }
             });
         };
+        
+        const printUrl = `${API_URL}/print_so?so_number=${props.data.so_number}`;
 
         return(
-            <>
+            <div style={{width:"130px"}}>
                 <Button variant="danger" className="me-2 btn-sm" title="Hapus" onClick={() => ClickDelete(props.data.so_number)}><i className="fas fa-trash-alt"></i></Button>
                 
-                <Button variant="info" className="me-2 btn-sm" onClick={() => showModalPrintSO(props.data.so_number)} title='Print'><i className="fas fa-print"></i></Button>
-            </>
+                <Button variant="info" className="me-2 btn-sm" onClick={() => window.open(printUrl, '_blank')} title='Print'><i className="fas fa-print"></i></Button>
+
+                <Button variant="primary" className="me-2 btn-sm" onClick={() => showModalPrintSO(props.data.so_number)} title='Detail'><i className="fas fa-circle-info"></i></Button>
+            </div>
         )
     }
 
@@ -535,9 +539,12 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
         ],
         ...(modeInput !== "delete_so" 
             ? [
-            { name: "Action", selector: (row) => 
-                <ButtonAction data={row} />, 
-            sortable: true }
+            { 
+                name: "Action", 
+                selector: (row) => <ButtonAction data={row} />, 
+                sortable: true,
+                width: "150px"
+            }
             ] : []
         ),
     ];

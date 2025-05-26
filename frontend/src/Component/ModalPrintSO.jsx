@@ -42,7 +42,6 @@ const ModalPrintSO = ({ show, handleClose, API_URL, soNumber }) => {
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="info" onClick={() => window.open(printUrl, '_blank')}>Print</Button>
-                <Button variant="danger" onClick={() => window.open(printUrl+"&download=pdf", '_blank')}>Download PDF</Button>
                 <Button variant="secondary" onClick={handleClose}>Tutup</Button>
             </Modal.Footer>
         </Modal>
