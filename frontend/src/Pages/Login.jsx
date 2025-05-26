@@ -95,6 +95,7 @@ const Login = ({API_URL}) => {
                                     </div>
                                 </div>
                             </div>
+                            <div className="col-lg-12 text-center mb-3 text-light fw-bold" style={{fontSize:"9pt"}}>Created By System Improvement PCD (Abdul Malik Ibrahim)</div>
                         </div>
                     </div>
                 </div>
