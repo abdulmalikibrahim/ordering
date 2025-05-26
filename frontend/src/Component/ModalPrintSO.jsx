@@ -29,7 +29,7 @@ const ModalPrintSO = ({ show, handleClose, API_URL, soNumber }) => {
     return (
         <Modal show={show} onHide={handleClose} size="xl">
             <Modal.Header closeButton>
-                <Modal.Title>Print SO</Modal.Title>
+                <Modal.Title>Detail SO</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 {loadingDetailPart ? (

@@ -60,36 +60,49 @@ const Login = ({API_URL}) => {
         //eslint-disable-next-line
     },[])
     return(
-        <div className="container-scroller" style={{height: '100vh'}}>
+        <div className="container-scroller" 
+            style={{
+                height: '100vh',
+                backgroundImage: `url('https://img.freepik.com/free-vector/realistic-mountain-landscape-illustration_23-2149156109.jpg?semt=ais_hybrid&w=740')`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+            }}>
             <div className="row" style={{height: '100vh'}}>
-                <div className="col-8 position-relative">
-                    <img src="https://logowik.com/content/uploads/images/511_daihatsu.jpg" style={{width:"150px", position: 'absolute', top: '10px', left: '10px'}} />
-                    <center><h1 className='mt-5'>ORDERING APPS</h1></center>
-                    <div className='mt-5 p-3' style={{overflowY: 'scroll', height: '86vh'}}>
+                <div className="col-9">
+                    <div className='mt-4 p-3' style={{overflowY: 'scroll', height: '100vh'}}>
                         <div className="row">
-                            <div className="col-12 mb-5">
-                                <h4>SPECIAL ORDER</h4>
-                                <Graph API_URL={API_URL} month={monthNow} year={yearNow} pic={'all'} type={'upload_so'} />
+                            <div className="col-12 mb-2">
+                                <div className="card mb-4">
+                                    <div className="card-header text-center p-3 bg-info text-light"><h3 className='mb-0'>SPECIAL ORDER</h3></div>
+                                    <div className="card-body p-0 pb-5 pt-4">
+                                        <Graph API_URL={API_URL} month={monthNow} year={yearNow} pic={'all'} type={'upload_so'} />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="col-12 mb-5">
-                                <h4>ADDITIONAL ORDER</h4>
-                                <Graph API_URL={API_URL} month={monthNow} year={yearNow} pic={'all'} type={'additional'} />
+                            <div className="col-12 mb-2">
+                                <div className="card mb-4">
+                                    <div className="card-header text-center p-3 bg-info text-light"><h3 className='mb-0'>ADDITIONAL ORDER</h3></div>
+                                    <div className="card-body p-0 pb-5 pt-4">
+                                        <Graph API_URL={API_URL} month={monthNow} year={yearNow} pic={'all'} type={'additional'} />
+                                    </div>
+                                </div>
                             </div>
                             <div className="col-12">
-                                <h4>REDUCE ORDER</h4>
-                                <Graph API_URL={API_URL} month={monthNow} year={yearNow} pic={'all'} type={'reduce'} />
+                                <div className="card mb-4">
+                                    <div className="card-header text-center p-3 bg-info text-light"><h3 className='mb-0'>REDUCE ORDER</h3></div>
+                                    <div className="card-body p-0 pb-5 pt-4">
+                                        <Graph API_URL={API_URL} month={monthNow} year={yearNow} pic={'all'} type={'reduce'} />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="p-0 col-lg-4 d-flex align-items-center justify-content-center" 
-                    style={{
-                        backgroundImage: `url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi3ouYfxjGUo6DneSeAIcPREd449GpWycsVZ1i6eXCUZr1fjeGQe9_mSNA2rkqYVA4hRI&usqp=CAU')`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                    }}
-                >
+                <div className="p-0 col-lg-3 d-flex align-items-center justify-content-center">
                     <div className="card text-left p-5">
+                        <div className="text-center">
+                            <h1 style={{fontSize:"2.5rem", fontFamily:"calibri"}} className='mt-3 mb-4 fw-bold'>ORDERING APPS</h1>
+                        </div>
                         <div className="brand-logo">
                             <h3>LOGIN</h3>
                         </div>
