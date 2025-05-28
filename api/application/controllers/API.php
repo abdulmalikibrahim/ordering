@@ -8,11 +8,6 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 require_once FCPATH . 'vendor/autoload.php';
-use chillerlan\QRCode\QRCode;
-use chillerlan\QRCode\QROptions;
-use Picqer\Barcode\BarcodeGeneratorHTML;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 
 class API extends MY_Controller {
 
@@ -75,7 +70,7 @@ class API extends MY_Controller {
     {
         $username = $this->input->post("username");
         $password = $this->input->post("password");
-        $validation = $this->model->gd("account","*,(SELECT name FROM departement WHERE id = dept) AS dept","username = '$username'","row");
+        $validation = $this->model->gd("account","*,(SELECT name FROM departement WHERE id = dept) AS dept, dept as dept_id","username = '$username'","row");
         if(empty($validation)){
             $fb = ["statusCode" => 500, "res" => "Akun belum di daftarkan"];
             $this->fb($fb);
@@ -104,7 +99,10 @@ class API extends MY_Controller {
             "name" => $validation->name,
             "level" => $validation->level,
             "dept" => $validation->dept,
-            "level_name" => $level_name
+            "level_name" => $level_name,
+            "username" => $validation->username,
+            "dept_id" => $validation->dept_id,
+            "email" => $validation->email,
         ];
         
         $this->session->set_userdata($data);
@@ -130,8 +128,11 @@ class API extends MY_Controller {
             "name" => $this->name, 
             "level" => $this->level, 
             "dept" => $this->dept,
+            "username" => $this->username,
             "level_name" => $this->level_name, 
-            "dept_name" => $this->dept_name
+            "dept_name" => $this->dept_name,
+            "dept_id" => $this->dept_id,
+            "email" => $this->email,
         ];
         $this->fb($fb);
     }
@@ -173,6 +174,7 @@ class API extends MY_Controller {
                         "id" => $row->id,
                         "username" => $row->username,
                         "name" => $row->name,
+                        "email" => $row->email,
                         "dept" => $dept->name ?? 'Unknown', // Hindari error jika dept NULL
                         "level" => $level,
                         "id_dept" => $row->dept ?? '',
@@ -197,6 +199,7 @@ class API extends MY_Controller {
                 ->set_rules("username","Username","required|trim")
                 ->set_rules("dept","Departement","required|trim|integer")
                 ->set_rules("level","Level","required|trim|integer")
+                ->set_rules("email","Email","required|trim|valid_email")
                 ->set_rules("mode","Mode","required|trim");
 
             if($mode == "add"){
@@ -212,6 +215,7 @@ class API extends MY_Controller {
             $username = $this->input->post('username');
             $password = $this->input->post('password');
             $dept = $this->input->post('dept');
+            $email = $this->input->post('email');
             $level = $this->input->post('level');
             $id_update = $this->input->post('id_update');
 
@@ -220,6 +224,7 @@ class API extends MY_Controller {
                 "username" => $username,
                 "dept" => $dept,
                 "level" => $level,
+                "email" => $email,
             ];
 
             if($mode == "add"){
@@ -536,8 +541,8 @@ class API extends MY_Controller {
             $tipe_so = $mode_input == "upload_so" ? "SO" : ($mode_input == "reduce" ? "REDUCE" : "ADD");
             $so_number = $tipe_so."/PCD/KAP/".date("m/Y/").sprintf("%03d", $check_so_number->total + 1);
             $detail_account = $this->model->gd("account","dept,(SELECT shop_code FROM departement WHERE id=account.dept) as shop_code","id = '$pic'","row");
-            $spv_sign = $this->model->gd("account","id","status = '1' AND level = '3' AND dept = '".$detail_account->dept."'","row");
-            $mng_sign = $this->model->gd("account","id","status = '1' AND level = '4' AND dept = '".$detail_account->dept."'","row");
+            $spv_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '3' AND dept = '".$detail_account->dept."'","row");
+            $mng_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '4' AND dept = '".$detail_account->dept."'","row");
 
             if(empty($spv_sign) || empty($mng_sign)){
                 $fb = ["statusCode" => 500, "res" => "Upload gagal karena PIC Departement yang anda pilih belum memiliki account SPV atau MNG"];
@@ -584,10 +589,45 @@ class API extends MY_Controller {
                 "shop_code" => $detail_account->shop_code,
             ];
             $this->model->insert("data_order",$data_input);
-            
             $insert = $this->model->insert_batch("data_part_order",$data);
             if($insert){
-                $fb = ["statusCode" => 200, "res" => "Upload success"];
+                $spv_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '3' AND dept = '".$detail_account->dept."'","result");
+                if(empty($spv_sign)){
+                    $fb = ["statusCode" => 500, "res" => "Upload gagal karena PIC Departement belum memiliki account SPV"];
+                    $this->fb($fb);
+                }
+
+                foreach ($spv_sign as $spv_sign) {
+                    //KIRIM EMAIL
+                    $detail_so = $this->get_detail_so("array",$so_number);
+                    $to = $spv_sign->email;
+                    $subject = "Confirmation SO Number $so_number";
+                    $table = $this->table_data_so($detail_so);
+                    $id_approve = $so_number."#".$spv_sign->id."#3";
+                    $body = '<h4>Dear '.$spv_sign->name.",</h4>
+                    Terlampir adalah SO Number yang telah di input oleh ".$this->name.'<br>
+                    SO Number : <b>'.$so_number.'</b>
+                    <br>
+                    <br>
+                    '.$table.'
+                    <br>
+                    <br>
+                    Mohon untuk bisa konfirmasi SO Number ini dengan login melalui link di bawah ini.
+                    <br>
+                    <a href="'.FRONTEND_URL.'">Login Ordering Apps</a>
+                    <br>
+                    Atau anda bisa approve melalui link dibawah ini.
+                    <br>
+                    <a href="'.base_url("direct_approve?p=".encrypt($id_approve)).'">Approve SO</a>
+                    <br>
+                    <br>
+                    Terimakasih atas kerjasamanya.
+                    <br>
+                    <i>Ordering Apps PCD KAP</i>';
+                    $this->exec_send_email($to,$subject,$body);
+                }
+                
+                $fb = ["statusCode" => 200, "res" => "Upload success", "email" => ["to" => $to, "subject" => $subject, "body" => $body]];
             }else{
                 $fb = ["statusCode" => 500, "res" => "Upload failed"];
             }
@@ -634,9 +674,40 @@ class API extends MY_Controller {
             }
 
             $so_number = $this->input->post("so_number");
+            
+            //KIRIM EMAIL
+            $detail_so = $this->get_detail_so("array",$so_number);
+            $level_next_sign = $level == "3" ? "4" : ($level == "4" ? "1" : "pic");
+            $detail_next = $this->model->gd("account","id,email,name","id = ".$detail_so["data_so"]->pic,"row");
+
+            if(empty($detail_next)){
+                $fb = ["statusCode" => 500, "res" => "Tidak ada akun yang bisa dihubungi untuk level selanjutnya"];
+                $this->fb($fb);
+            }
+            
+            $to = $detail_next->email;
+            $subject = "Release SO Number $so_number";
+            $table = $this->table_data_so($detail_so);
+            $body = '<h4>Dear '.$detail_next->name.',</h4>
+            SO Number '.$so_number.' telah di release oleh <b>'.$this->name.'</b>
+            <br>
+            <br>
+            '.$table.'
+            <br>
+            <br>
+            Anda bisa login melalui link di bawah ini.
+            <br>
+            <a href="'.FRONTEND_URL.'">Login Ordering Apps</a>
+            <br>
+            <br>
+            Terimakasih atas kerjasamanya.
+            <br>
+            <i>Ordering Apps PCD KAP</i>';
+            $this->exec_send_email($to,$subject,$body);
+
             $data = [ "release_sign" => $id_user, "release_sign_time" => date("Y-m-d H:i:s") ];
             $this->model->update("data_order","so_number = '$so_number'",$data);
-            $fb = ["statusCode" => 200, "res" => "Release berhasil"];
+            $fb = ["statusCode" => 200, "res" => "Release berhasil", "email" => ["to" => $to, "subject" => $subject, "body" => $body]];
             $this->fb($fb);
         }
 
@@ -712,7 +783,7 @@ class API extends MY_Controller {
                     }
                     $release_sign_time = !empty($row->release_sign_time) ? date("d-M-Y H:i",strtotime($row->release_sign_time)) : '';
 
-                    $total_part = $this->model->gd("data_part_order","COUNT(*) as total","so_number = '$row->so_number'","row");
+                    $total_part = $this->model->gd("data_part_order","COUNT(*) as total","deleted_date IS NULL AND so_number = '$row->so_number'","row");
 
                     $newData[] = [
                         "id" => $row->id,
@@ -752,12 +823,52 @@ class API extends MY_Controller {
             }
 
             $so_number = $this->input->post("so_number");
+
+            //KIRIM EMAIL
+            $detail_so = $this->get_detail_so("array",$so_number);
+            $level_next_sign = $level == "3" ? "4" : "1";
+            $query_dept_next_sign = $level == "3" ? "AND dept = (SELECT dept FROM account WHERE id = '".$detail_so["data_so"]->pic."')" : "";
+            $detail_next = $this->model->gd("account","id,email,name","status = '1' AND level = '$level_next_sign' $query_dept_next_sign","result");
+
+            if(empty($detail_next)){
+                $fb = ["statusCode" => 500, "res" => "Tidak ada akun yang bisa dihubungi untuk level selanjutnya"];
+                $this->fb($fb);
+            }
+
+            foreach ($detail_next as $detail_next) {
+                $to = $detail_next->email;
+                $subject = "Confirmation SO Number $so_number";
+                $table = $this->table_data_so($detail_so);
+                $id_approve = $so_number."#".$detail_next->id."#".$level_next_sign;
+                $body = '<h4>Dear '.$detail_next->name.',</h4>
+                Terlampir adalah SO Number yang telah di input oleh <b>'.$detail_so["pic"].'</b> dan di setujui oleh <b>'.$this->name.'</b><br>
+                SO Number : <b>'.$so_number.'</b>
+                <br>
+                <br>
+                '.$table.'
+                <br>
+                <br>
+                Mohon untuk bisa konfirmasi SO Number ini dengan login melalui link di bawah ini.
+                <br>
+                <a href="'.FRONTEND_URL.'">Login Ordering Apps</a>
+                <br>
+                Atau anda bisa approve melalui link dibawah ini.
+                <br>
+                <a href="'.base_url("direct_approve?p=".encrypt($id_approve)).'">Approve SO</a>
+                <br>
+                <br>
+                Terimakasih atas kerjasamanya.
+                <br>
+                <i>Ordering Apps PCD KAP</i>';
+                $this->exec_send_email($to,$subject,$body);
+            }
+
             $data = [ $level == "3" ? "spv_sign_time" : "mng_sign_time" => date("Y-m-d H:i:s") ];
             if(!empty($other)){
                 $data[$level == "3" ? "spv_sign" : "mng_sign"] = $this->id_user;
             }
             $this->model->update("data_order","so_number = '$so_number'",$data);
-            $fb = ["statusCode" => 200, "res" => "Approval berhasil"];
+            $fb = ["statusCode" => 200, "res" => "Approval berhasil", "email" => ["to" => $to, "subject" => $subject, "body" => $body]];
             $this->fb($fb);
         }
 
@@ -780,6 +891,201 @@ class API extends MY_Controller {
             $this->fb($fb);
         }
     //REMAIN SO
+
+    private function table_data_so($detail_so)
+    {
+        $table = '';
+        if(!empty($detail_so["detail_part_so"])){
+            $detail_part_so = $detail_so["detail_part_so"];
+            $table .= '
+            <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
+                <tr>
+                    <th style="text-align: center;">No</th>
+                    <th style="text-align: center;">Job No</th>
+                    <th style="text-align: center;">Part Number</th>
+                    <th style="text-align: center;">Part Name</th>
+                    <th style="text-align: center;">Supplier</th>
+                    <th style="text-align: center;">Price/Pcs</th>
+                    <th style="text-align: center;">Qty/Kbn</th>
+                    <th style="text-align: center;">Req. Kbn</th>
+                    <th style="text-align: center;">Req. Pcs</th>
+                    <th style="text-align: center;">Total Price</th>
+                    <th style="text-align: center;">Remarks</th>
+                </tr>';
+            $no = 1;
+            foreach ($detail_part_so as $data) {
+                $table .= '
+                <tr>
+                    <td style="text-align: center;">'.$no++.'</td>
+                    <td style="text-align: center;">'.$data->job_no.'</td>
+                    <td style="text-align: center;">'.$data->part_number.'</td>
+                    <td style="text-align: center;">'.$data->part_name.'</td>
+                    <td style="text-align: center;">'.$data->vendor_name.'</td>
+                    <td style="text-align: center;">'.number_format($data->price,0,"",",").'</td>
+                    <td style="text-align: center;">'.number_format($data->std_qty,0,"",",").'</td>
+                    <td style="text-align: center;">'.number_format($data->qty_kanban,0,"",",").'</td>
+                    <td style="text-align: center;">'.number_format($data->qty_packing,0,"",",").'</td>
+                    <td style="text-align: center;">'.number_format($data->total_price,0,"",",").'</td>
+                    <td style="text-align: center;">'.$data->remark_part.'</td>
+                </tr>';
+            }
+            
+            $table .= '
+            <tr>
+                <td style="text-align: center;" colspan="7"><b>Total Part Release Order</b></td>
+                <td style="text-align: center;"><b>'.number_format($detail_so["grand_total_req_kbn"],0,"",",").'</b></td>
+                <td style="text-align: center;"><b>'.number_format($detail_so["grand_total_req_pcs"],0,"",",").'</b></td>
+                <td style="text-align: center;"><b>'.number_format($detail_so["grand_total_price"],0,"",",").'</b></td>
+            </tr>';
+            $table .= '</table>';
+        }
+        return $table;
+    }
+
+    function direct_approve()
+    {
+        $this->load->view("admin/direct_approve");
+    }
+
+    function exec_direct_approve()
+    {
+        $p = $this->input->get("p");
+        if(empty($p)){
+            $fb = ["statusCode" => 400, "res" => "Parameter tidak ditemukan"];
+            $this->fb($fb);
+        }
+        $decrypt = decrypt($p);
+        if(empty($decrypt)){
+            $fb = ["statusCode" => 400, "res" => "Parameter tidak valid"];
+            $this->fb($fb);
+        }
+        $data = explode("#", $decrypt);
+        $so_number = $data[0];
+        $id_user = $data[1];
+        $level = $data[2];
+
+        //CHECK STATUS SO
+        $check_so = $this->model->gd("data_order","spv_sign,spv_sign_time,mng_sign_time,mng_sign,release_sign_time,release_sign,reject_date,reject_reason,reject_by","so_number = '$so_number'","row");
+        if(empty($check_so)){
+            $fb = ["statusCode" => 400, "res" => "SO Number tidak ditemukan"];
+            $this->fb($fb);
+        }
+
+        if(!empty($check_so->reject_date)){
+            $account_reject = $this->model->gd("account","name","id = '$check_so->reject_by'","row");
+            $fb = ["statusCode" => 400, "res" => "SO Number ini sudah di reject oleh ".$account_reject->name." pada ".date("d-M-Y H:i",strtotime($check_so->reject_date))." dengan alasan :<br>".$check_so->reject_reason];
+            $this->fb($fb);
+        }
+
+        if($level == "4" || $level == "1"){
+            //CHECK APAKAH SUDAH DI APPROVE OLEH SPV
+            if(empty($check_so->spv_sign_time)){
+                $fb = ["statusCode" => 400, "res" => "SO Number ini belum di approve oleh SPV"];
+                $this->fb($fb);
+            }
+        }
+        
+        $so_already_approve = "no";
+        $id_approve = "";
+        if(!empty($check_so->spv_sign_time) && $level == "3"){
+            $id_approve = $check_so->spv_sign;
+            $so_already_approve = "yes";
+        }
+
+        if(!empty($check_so->mng_sign_time) && $level == "4"){
+            $id_approve = $check_so->mng_sign;
+            $so_already_approve = "yes";
+        }
+        
+        if(!empty($check_so->release_sign_time) && $level == "1"){
+            $id_approve = $check_so->release_sign;
+            $so_already_approve = "yes";
+        }
+        
+        if($so_already_approve == "yes"){
+            $account_approve = $this->model->gd("account","name","id = '$id_approve'","row");
+            $fb = ["statusCode" => 400, "res" => "SO Number ini sudah di ".($level == "1" ? "release" : "approve")." oleh ".(!empty($account_approve->name) ? $account_approve->name : "Unknown Database")." pada ".date("d-M-Y H:i",strtotime($check_so->mng_sign_time))];
+            $this->fb($fb);
+        }
+
+        if($level == "3"){
+            $data = [ "spv_sign" => $id_user, "spv_sign_time" => date("Y-m-d H:i:s") ];
+        }else if($level == "4"){
+            $data = [ "mng_sign" => $id_user, "mng_sign_time" => date("Y-m-d H:i:s") ];
+        }else if($level == "1"){
+            $data = [ "release_sign" => $id_user, "release_sign_time" => date("Y-m-d H:i:s") ];
+        }
+
+        //KIRIM EMAIL
+        $detail_so = $this->get_detail_so("array",$so_number);
+        $level_next_sign = $level == "3" ? "4" : ($level == "4" ? "1" : "pic");
+        if($level_next_sign == "pic"){
+            $detail_next = $this->model->gd("account","id,email,name","id = ".$detail_so["data_so"]->pic,"row");
+        }else{
+            $query_dept_next_sign = $level == "3" ? "AND dept = (SELECT dept FROM account WHERE id = '$id_user')" : "";
+            $detail_next = $this->model->gd("account","id,email,name","status = '1' AND level = '$level_next_sign' $query_dept_next_sign","result");
+        }
+
+        if(empty($detail_next)){
+            $fb = ["statusCode" => 500, "res" => "Tidak ada akun yang bisa dihubungi untuk level selanjutnya"];
+            $this->fb($fb);
+        }
+
+        $name_approve = $this->model->gd("account","name","id = '$id_user'","row");
+        if($level_next_sign == "pic"){
+            $to = $detail_next->email;
+            $subject = "Release SO Number $so_number";
+            $table = $this->table_data_so($detail_so);
+            $body = '<h4>Dear '.$detail_next->name.',</h4>
+            SO Number '.$so_number.' telah di release oleh <b>'.$name_approve->name.'</b>
+            <br>
+            <br>
+            '.$table.'
+            <br>
+            <br>
+            Anda bisa login melalui link di bawah ini.
+            <br>
+            <a href="'.FRONTEND_URL.'">Login Ordering Apps</a>
+            <br>
+            <br>
+            Terimakasih atas kerjasamanya.
+            <br>
+            <i>Ordering Apps PCD KAP</i>';
+            $this->exec_send_email($to,$subject,$body);
+        }else{
+            foreach ($detail_next as $detail_next) {
+                $to = $detail_next->email;
+                $subject = "Confirmation SO Number $so_number";
+                $table = $this->table_data_so($detail_so);
+                $id_approve = $so_number."#".$detail_next->id."#".$level_next_sign;
+                $body = '<h4>Dear '.$detail_next->name.",</h4>
+                Terlampir adalah SO Number yang telah di input oleh <b>".$detail_so["pic"]."</b> dan di setujui oleh <b>".$name_approve->name.'</b><br>
+                SO Number : <b>'.$so_number.'</b>
+                <br>
+                <br>
+                '.$table.'
+                <br>
+                <br>
+                Mohon untuk bisa konfirmasi SO Number ini dengan login melalui link di bawah ini.
+                <br>
+                <a href="'.FRONTEND_URL.'">Login Ordering Apps</a>
+                <br>
+                Atau anda bisa approve melalui link dibawah ini.
+                <br>
+                <a href="'.base_url("direct_approve?p=".encrypt($id_approve)).'">Approve SO</a>
+                <br>
+                <br>
+                Terimakasih atas kerjasamanya.
+                <br>
+                <i>Ordering Apps PCD KAP</i>';
+                $this->exec_send_email($to,$subject,$body);
+            }
+        }
+
+        $this->model->update("data_order","so_number = '$so_number'",$data);
+        $fb = ["statusCode" => 200, "res" => "SO Number $so_number berhasil di ".($level != "1" ? "approve" : "release")];
+        $this->fb($fb);
+    }
 
     function count_remain_release()
     {
@@ -825,324 +1131,6 @@ class API extends MY_Controller {
             }
         }
         $this->fb($return_data);
-    }
-
-    function printDN()
-    {
-        ob_start(); 
-        $vendor_code = $this->input->get("vendor_code");
-        $vendor_alias = $this->input->get("vendor_alias");
-        
-        $get_data = $this->model->gd("master","*,SUM(order_kbn) as total_kbn","vendor_code = '$vendor_code' GROUP BY order_no","result");
-
-        if(empty($get_data)){
-            $fb = ["statusCode" => 404, "res" => "Data Kosong"];
-            $this->fb($fb);
-        }
-        
-        $html = '
-        <!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>QR Code dan Barcode</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.0.1/css/bootstrap.min.css1" />
-                <style type="text/css">
-                    @page {
-                        size:A4,
-                        margin:3rem 1re 3rem 1rem;
-                    }
-                    @font-face {
-                        font-family: "source_sans_proregular";           
-                        src: local("Source Sans Pro"), url("fonts/sourcesans/sourcesanspro-regular-webfont.ttf") format("truetype");
-                        font-weight: normal;
-                        font-style: normal;
-
-                    }        
-                    body{
-                        font-family: "source_sans_proregular", Calibri,Candara,Segoe,Segoe UI,Optima,Arial,sans-serif;            
-                    }
-                    .page_break {
-                        page-break-before: always;
-                        position:relative;
-                        min-height:340px;
-                    }
-                    .page_break:first-of-type {
-                        page-break-before: avoid; /* Prevent break before the first element */
-                    }
-                </style>
-            </head>
-            <body style="font-size:10px !important;">';
-        $dompdf = new Dompdf();
-        foreach ($get_data as $get_data) {
-            $listOrder = $this->model->gd("master","*","order_no = '".$get_data->order_no."' AND vendor_code = '$vendor_code'","result");
-
-            $orderNo = $get_data->order_no;
-
-            //BUAT BARCODE
-            $barcode_generator = new BarcodeGeneratorHTML();
-            $barcodeOrderNo = $barcode_generator->getBarcode($orderNo, $barcode_generator::TYPE_CODE_128,2,30);
-
-            // BUAT QR CODE
-            // Create an instance of QROptions to set the QR code settings
-            $options = new QROptions([
-                'eccLevel' => QRCode::ECC_L, // Error correction level (L, M, Q, H)
-                'addQuietzone' => false,
-                'scale' => 5, // Scale doesn't affect SVG size
-                'imageBase64' => true, // Whether to output as a base64 image
-            ]);
-
-            // Create a new QRCode instance with the options
-            $qrcode = new QRCode($options);
-            $qrCodeOrderNo = $qrcode->render($orderNo);
-
-            $ttd = "(___________________)";
-            
-            $listPart = "";
-            if(!empty($listOrder)){
-                $no = 1;
-                foreach ($listOrder as $listOrder) {
-                    $listPart .= '
-                    <tr style="text-align:center; vertical-align:middle;">
-                        <td>'.$no++.'</td>
-                        <td>'.$listOrder->part_no.'</td>
-                        <td>'.$listOrder->job_no.'</td>
-                        <td>'.$listOrder->part_name.'</td>
-                        <td>'.$listOrder->order_pcs.'</td>
-                        <td>'.$listOrder->order_kbn.'</td>
-                        <td>'.($listOrder->order_pcs * $listOrder->order_kbn).'</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>';
-                }
-            }
-
-            $html .= '
-            <div class="page_break">
-                <table style="width:100%">
-                    <tr>
-                        <td align="center" style="width:70%; vertical-align:middle !important; font-size:30px; font-weight:bold;">Delivery Notes</td>
-                        <td style="width:30%">'.$barcodeOrderNo.'<h4 style="margin:0; font-size:17pt;">'.$get_data->order_no.'</h4></td>
-                    </tr>
-                </table>
-
-                <table style="width:100%">
-                    <tr>
-                        <td style="width:33%;">
-                            <table>
-                                <tbody>
-                                    <tr>
-                                        <td>Vendor Code</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->vendor_code.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Vendor Name</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->vendor_name.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Vendor Site</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->vendor_site.'</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width:33%;">
-                        </td>
-                        <td style="width:33%; vertical-align:top;">
-                            <table>
-                                <tbody>
-                                    <tr>
-                                        <td>Transporter</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->lp.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Group Route</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->route.'</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-                
-                <table style="width:100%">
-                    <tr>
-                        <td style="width:33%; vertical-align:top;">
-                            <h3 style="font-weight:bold; margin:0;">ORDER</h3>
-                            <table>
-                                <tbody>
-                                    <tr>
-                                        <td>Date</td>
-                                        <td>:</td>
-                                        <td>'.date("d-M-Y",strtotime($get_data->order_date)).'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Lane No</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->lane.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Delivery / Day</td>
-                                        <td>:</td>
-                                        <td></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Category</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->part_category.'</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width:33%;">
-                            <h3 style="font-weight:bold; margin:0;">DELIVERY</h3>
-                            <table>
-                                <tbody>
-                                    <tr>
-                                        <td>Shop</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->shop_code.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Date</td>
-                                        <td>:</td>
-                                        <td>'.date("d-M-Y",strtotime($get_data->del_date)).'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Del. Cycle</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->del_time.' / '.$get_data->del_cycle.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Plant Site</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->plant_code.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Parking No</td>
-                                        <td>:</td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width:33%; position:relative;">
-                            <table>
-                                <tbody>
-                                    <tr>
-                                        <td>DN No</td>
-                                        <td>:</td>
-                                        <td style="padding-right:40px;">'.$get_data->order_no.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Page</td>
-                                        <td>:</td>
-                                        <td>1/1</td>
-                                    </tr>
-                                    <tr>
-                                        <td>PO No</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->po_number.'</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Total KBN</td>
-                                        <td>:</td>
-                                        <td>'.$get_data->total_kbn.'</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div style="position:absolute; top:10px; right:20px; width:60px; height:60px; padding:8px; border:1px solid;">
-                                <img src="'.$qrCodeOrderNo.'" width="100%">
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-                
-                <table style="margin-top:10px; width:100%; border-collapse: collapse;" border="1">
-                    <thead>
-                        <tr style="text-align:center;">
-                            <th rowspan="2">No</th>
-                            <th rowspan="2">Material No</th>
-                            <th rowspan="2">Job No</th>
-                            <th rowspan="2">Material Name</th>
-                            <th rowspan="2">Qty/Box</th>
-                            <th rowspan="2">Total Kanban</th>
-                            <th rowspan="2">Total Qty (PCS)</th>
-                            <th colspan="3">Confirmation Check</th>
-                            <th rowspan="2">Remark</th>
-                        </tr>
-                        <tr style="text-align:center; vertical-align:middle;">
-                            <th>Vendor</th>
-                            <th>Log Partner</th>
-                            <th>ADM</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    '.$listPart.'
-                    </tbody>
-                </table>
-
-                <table style="width:100%; margin-top:20px; font-size:8pt; position: absolute; bottom:100px; right:0;">
-                    <tr>
-                        <td style="width:40%"></td>
-                        <td style="width:60%;">
-                            <table style="width:100%;">
-                                <tbody>
-                                    <tr style="font-weight:bold; text-align:center;">
-                                        <td colspan="2" style="width:33%">SUPPLIER</td>
-                                        <td colspan="2" style="width:33%">TRANSPORTER</td>
-                                        <td colspan="2" style="width:33%">PT. ADM</td>
-                                    </tr>
-                                    <tr style="text-align:center;">
-                                        <td>APPROVED</td>
-                                        <td>PREPARED</td>
-                                        <td>APPROVED</td>
-                                        <td>PREPARED</td>
-                                        <td>APPROVED</td>
-                                        <td>PREPARED</td>
-                                    </tr>
-                                    <tr style="text-align:center; vertical-align:bottom;">
-                                        <td style="height:60px">'.$ttd.'</td>
-                                        <td>'.$ttd.'</td>
-                                        <td>'.$ttd.'</td>
-                                        <td>'.$ttd.'</td>
-                                        <td>'.$ttd.'</td>
-                                        <td>'.$ttd.'</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            ';
-        }
-        $html .= '
-            </body>
-        </html>';
-        // DomPDF Operations
-        $dompdf = new Dompdf();
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
-        $dompdf->render();
-        ob_end_clean();
-        $dompdf->get_canvas()->get_cpdf()->setEncryption('adm');
-        $dompdf->stream($vendor_alias." (".$vendor_code.").pdf", ["Attachment" => false]);
-        $updateDate["download_dn"] = "1";
-        $data = $this->model->update("master","vendor_code = '$vendor_code'",$updateDate);
-        if(empty($data)){
-            $fb = ["statusCode" => 401, "res" => "Data kosong"];
-            $this->fb($fb);
-        }
-        exit();
     }
 
     function get_data_graph()
@@ -1260,6 +1248,31 @@ class API extends MY_Controller {
             "reject_date" => date("Y-m-d"),
             "reject_reason" => $keterangan
         ];
+        
+        $detail_so = $this->get_detail_so("array",$so_number);
+        $detail_next = $this->model->gd("account","id,email,name","id = ".$detail_so["data_so"]->pic,"row");
+        $to = $detail_next->email;
+        $subject = "Cancel SO Number $so_number";
+        $table = $this->table_data_so($detail_so);
+        $body = '<h4>Dear '.$detail_next->name.',</h4>
+        '.$so_number.' telah di cancel oleh <b>'.$this->name.'</b>
+        <br>
+        Alasan cancel :
+        <br>
+        <b>'.str_replace("\n","<br>",$keterangan).'</b>
+        <br>
+        <br>
+        '.$table.'
+        <br>
+        <br>
+        Anda bisa login melalui link di bawah ini.
+        <br>
+        <a href="'.FRONTEND_URL.'">Login Ordering Apps</a>
+        <br><br>
+        Terimakasih atas kerjasamanya.
+        <br>
+        <i>Ordering Apps PCD KAP</i>';
+        $this->exec_send_email($to,$subject,$body);
 
         $this->model->update("data_order","so_number = '$so_number'",$data_input);
         $fb = ["statusCode" => 200, "res" => "Proses berhasil di lakukan"];
@@ -1334,13 +1347,14 @@ class API extends MY_Controller {
 
     function export_detail_part()
     {
+        header('Content-Type: application/json');
         $so = $this->input->get("so");
         $data_part = $this->model->join_data(
             "data_part_order a",
             "master b",
             "a.part_number=b.part_number AND a.vendor_code=b.vendor_code",
             "a.shop_code,a.tgl_delivery,a.qty_kanban,a.remarks as remark_part,b.*",
-            "so_number = '$so'",
+            "a.deleted_date IS NULL AND a.so_number = '$so'",
             "result"
         );
 
@@ -1375,9 +1389,9 @@ class API extends MY_Controller {
             $sheet->setCellValue('H' . $row, $data->job_no);
             $sheet->setCellValue('I' . $row, $data->qty_kanban);
             $sheet->setCellValue('J' . $row, ($data->qty_kanban * $data->std_qty));
-            $sheet->setCellValue('K' . $row, ($data->std_qty * $data->price));
+            $sheet->setCellValue('K' . $row, ($data->qty_kanban * $data->std_qty * $data->price));
             $sheet->setCellValue('L' . $row, $data->remark_part);
-            $total_price += ($data->std_qty * $data->price);
+            $total_price += ($data->qty_kanban * $data->std_qty * $data->price);
             $row++;
         }
         $sheet->setCellValue('J' . $row, "TOTAL PRICE");
@@ -1464,6 +1478,46 @@ class API extends MY_Controller {
         $this->fb($fb);
     }
 
+    private function exec_send_email($to,$subject,$body)
+    {
+        $curl = curl_init();
+
+        $data = [
+            "sender" => [
+                "name" => EMAIL_NAME,
+                "email" => EMAIL_SENDER
+            ],
+            "to" => [[
+                "email" => $to
+            ]],
+            "subject" => $subject,
+            "htmlContent" => $body
+        ];
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => EMAIL_API_URL,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                "accept: application/json",
+                "api-key: ".EMAIL_API_KEY,
+                "content-type: application/json"
+            ],
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $fb = ["statusCode" => 500, "res" => $err];
+        } else {
+            $fb = ["statusCode" => 200, "timesend" => date("Y-m-d H:i:s"), "to" => $to, "subject" => $subject, "res" => "Kirim email berhasil"];
+        }
+        return $fb;
+    }
+
     function get_detail_so($return = "json", $so_number = "")
     {
         if(empty($so_number)){
@@ -1488,7 +1542,7 @@ class API extends MY_Controller {
             "master b",
             "a.part_number=b.part_number AND a.vendor_code=b.vendor_code",
             "a.shop_code,a.tgl_delivery,a.qty_kanban,a.remarks as remark_part,b.*,(a.qty_kanban * b.std_qty) as qty_packing,(a.qty_kanban * b.std_qty * b.price) as total_price",
-            "so_number = '$so_number'",
+            "a.deleted_date IS NULL AND so_number = '$so_number'",
             "result"
         );
 
@@ -1540,5 +1594,100 @@ class API extends MY_Controller {
 
         $html = $this->load->view("admin/print_so", $data_so, true);
         echo $html;
+    }
+
+    function update_profile()
+    {
+        if(empty($this->id_user)){
+            $fb = ["statusCode" => 500, "res" => "Sesi login anda telah berakhir"];
+            $this->fb($fb);
+        }
+
+        $this->form_validation
+            ->set_rules('level','Level','required|trim|integer')
+            ->set_rules('name','Nama','required|trim')
+            ->set_rules('username','Username','required|trim')
+            ->set_rules('dept','Departement','required|trim|integer')
+            ->set_rules('email','Email','required|trim|valid_email');
+
+        if($this->form_validation->run() === FALSE){
+            $fb = ["statusCode" => 500, "res" => validation_errors()];
+            $this->fb($fb);
+        }
+
+        $name = $this->input->post("name");
+        $level = $this->input->post("level");
+        $username = $this->input->post("username");
+        $dept = $this->input->post("dept");
+        $email = $this->input->post("email");
+        $id_user = $this->id_user;
+
+        $data_update = [
+            "name" => $name,
+            "level" => $level,
+            "username" => $username,
+            "dept" => $dept,
+            "email" => $email,
+        ];
+
+        $this->model->update("account","id = '$id_user'",$data_update);
+        
+        $validation = $this->model->gd("account","*,(SELECT name FROM departement WHERE id = dept) AS dept, dept as dept_id","id = '$id_user'","row");
+        if(empty($validation)){
+            $fb = ["statusCode" => 500, "res" => "Akun belum di daftarkan"];
+            $this->fb($fb);
+        }
+
+        if($validation->status == "0"){
+            $fb = ["statusCode" => 500, "res" => "Akun sudah di non aktifkan"];
+            $this->fb($fb);
+        }
+
+        $level_name = "Admin";
+        if($validation->level == "2"){
+            $level_name = "User";
+        }else if($validation->level == "3"){
+            $level_name = "Supervisor";
+        }else if($validation->level == "4"){
+            $level_name = "Manager";
+        }
+
+        $data = [
+            "id_user" => $validation->id,
+            "name" => $validation->name,
+            "level" => $validation->level,
+            "dept" => $validation->dept,
+            "level_name" => $level_name,
+            "username" => $validation->username,
+            "dept_id" => $validation->dept_id,
+            "email" => $validation->email,
+        ];
+        $this->session->set_userdata($data);
+
+        $fb = ["statusCode" => 200, "res" => "Profile berhasil di rubah"];
+        $this->fb($fb);
+    }
+
+    function change_password()
+    {
+        if(empty($this->id_user)){
+            $fb = ["statusCode" => 500, "res" => "Sesi login anda telah berakhir"];
+            $this->fb($fb);
+        }
+
+        $this->form_validation
+            ->set_rules('password','Password','required|trim')
+            ->set_rules('passwordconfirm','Password Confirmation','required|trim|matches[password]');
+
+        if($this->form_validation->run() === FALSE){
+            $fb = ["statusCode" => 500, "res" => validation_errors()];
+            $this->fb($fb);
+        }
+
+        $password = password_hash($this->input->post("password"),PASSWORD_DEFAULT);
+        $update_password = ["password" => $password];
+        $this->model->update("account","id = '".$this->id_user."'",$update_password);
+        $fb = ["statusCode" => 200, "res" => "Password berhasil di rubah"];
+        $this->fb($fb);
     }
 }

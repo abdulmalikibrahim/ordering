@@ -37,6 +37,12 @@ const RemainApprove = ({API_URL}) => {
     const handleCloseCancelModal = () => setShowCancelModal(false);
     const handleShowCancelModal = () => setShowCancelModal(true);
     const [soNumberCancel,setSoNumberCancel] = useState('');
+    const [tglDelivery, setTglDelivery] = useState("");
+    const [shopCodeDetail, setShopCodeDetail] = useState("");
+    const [totalPrice, setTotalPrice] = useState("");
+    const [statusSO, setStatusSO] = useState("");
+    const [rejectReason, setRejectReason] = useState("");
+    const [soNumberPick, setSoNumberPick] = useState("");
     
     useEffect(() => {
         const path = window.location.pathname;
@@ -56,7 +62,13 @@ const RemainApprove = ({API_URL}) => {
         setLoadingDetailPart(true);
         try {
             const response = await axios.get(`${API_URL}/get_detail_part_so?so_number=${so_number}`);
-            const data = Array.isArray(response.data) ? response.data : [];
+            const data = Array.isArray(response.data.data) ? response.data.data : [];
+            setShopCodeDetail(response.data.shop_code);
+            setTglDelivery(response.data.tgl_delivery);
+            setSoNumberPick(so_number);
+            setTotalPrice(response.data.grandTotal);
+            setStatusSO(response.data.status_so);
+            setRejectReason(response.data.reason_reject);
             setDetailPart(data);
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -92,6 +104,15 @@ const RemainApprove = ({API_URL}) => {
                 data={detailPart}
                 loadingDetailPart={loadingDetailPart}
                 customStyles={customStyles}
+                API_URL={API_URL}
+                ShowPart={ShowPart}
+                setreloadTable={setreloadTable}
+                tglDelivery={tglDelivery}
+                shopCode={shopCodeDetail}
+                soNumber={soNumberPick}
+                totalPrice={totalPrice}
+                statusSO={statusSO}
+                rejectReason={rejectReason}
             />
 
             <ModalCancelSO 
@@ -114,6 +135,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
     const [search, setSearch] = useState("");
     const path = window.location.pathname;
     const pageName = path.split("/")[1];
+    const [loadingApprove, setLoadingApprove] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -157,6 +179,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
 
     const ButtonAction = ({...props}) => {
         const ClickApprove = async (so_number) => {
+            setLoadingApprove(so_number);
             try {
                 let url = `${API_URL}/approve_so`;
                 if (pageName === 'remain_approve_other_shop') {
@@ -168,11 +191,13 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
                     withCredentials: true,
                 });
                 if(response.status === 200){
+                    setLoadingApprove(false);
                     Swal.fire("Berhasil!", "Approval berhasil di lakukan.", "success");
                     setreloadTable(Math.random() * 10);
                     setReloadCountRemain(Math.random() * 10);
                 }
             } catch (error) {
+                setLoadingApprove(false);
                 Swal.fire("Gagal!", "Terjadi kesalahan saat approve.", "error");
                 console.error(error);
                 
@@ -192,7 +217,11 @@ const Table = ({API_URL, reloadTable, setreloadTable, ShowPart, titleTable, mode
 
         return(
             <>
-                <Button variant="info" className="me-2 btn-sm" title="Approve" onClick={() => ClickApprove(props.data.so_number)}><i className="fas fa-thumbs-up"></i></Button>
+                <Button variant="info" className="me-2 btn-sm" title="Approve" onClick={() => ClickApprove(props.data.so_number)}>
+                    {
+                        loadingApprove == props.data.so_number ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-thumbs-up"></i>
+                    }
+                </Button>
                 <Button variant="danger" className="btn-sm" title="Reject" onClick={() => CancelApprove(props.data.so_number)}><i className="fas fa-times-circle"></i></Button>
             </>
         )

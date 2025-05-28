@@ -10,6 +10,7 @@ import Departement from './Pages/Departement';
 import Input_SO from './Pages/Input_SO';
 import { GlobalProvider } from './GlobalContext';
 import RemainApprove from './Pages/RemainApprove';
+import MyProfile from './Pages/MyProfile';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/already_approve" element={<RemainApprove API_URL={API_URL} />} />
         <Route path="/need_release" element={<Input_SO API_URL={API_URL} />} />
         <Route path="/remain_approve_other_shop" element={<RemainApprove API_URL={API_URL} />} />
+        <Route path="/myprofile" element={<MyProfile />} />
       </Routes>
     </Router>
   );

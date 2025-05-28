@@ -84,3 +84,8 @@ defined('EXIT_DATABASE')       OR define('EXIT_DATABASE', 8); // database error
 defined('EXIT__AUTO_MIN')      OR define('EXIT__AUTO_MIN', 9); // lowest automatically-assigned error code
 defined('EXIT__AUTO_MAX')      OR define('EXIT__AUTO_MAX', 125); // highest automatically-assigned error code
 define('SITE_NAME', 'Monren');
+define('EMAIL_NAME','NAMA PENGIRIM EMAIL DI SISTEM');
+define('EMAIL_SENDER','EMAIL YANG MAU DIJADIIN SENDER BISA GMAIL AJA');
+define('EMAIL_API_KEY','ISI DINISI API KEY BREVO KAMU DI SINI'); // Ganti dengan API Key Brevo kamu
+define('EMAIL_API_URL','ISI URL API BREVO');
+define('FRONTEND_URL', 'http://localhost:3000');

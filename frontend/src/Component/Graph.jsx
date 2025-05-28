@@ -24,7 +24,6 @@ const Graph = ({ API_URL,month,year,pic,type }) => {
                 }
             });
             if(response.status === 200) {
-                console.log(response.data.res);
                 setData(response.data.res.bar);
                 setDataPie(response.data.res.pie);
                 setDataPrice(response.data.res.price);

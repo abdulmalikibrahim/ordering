@@ -7,8 +7,10 @@ import Swal from 'sweetalert2';
 const ModalCancelSO = ({ handleCloseCancelModal, showCancelModal, API_URL, setreloadTable, soNumberCancel }) => {
     const {idAccount, setReloadCountRemain} = useGlobal();
     const [keterangan, setKeterangan] = useState('');
+    const [loadingSaving, setLoadingSaving] = useState(false);
   
     const saveData = async () => {
+        setLoadingSaving(true);
         try {
             const formData = new FormData();
             formData.append("id_account",idAccount);
@@ -22,7 +24,9 @@ const ModalCancelSO = ({ handleCloseCancelModal, showCancelModal, API_URL, setre
             handleCloseCancelModal();
             setKeterangan('');
             Swal.fire("Sukses", "Proses berhasil di lakukan", "success");
+            setLoadingSaving(false);
         } catch (error) {
+            setLoadingSaving(false);
             if (error.response.status === 400 || error.response.status === 500) {
                 Swal.fire("Error", error.response.data.res, "error");
             } else {
@@ -42,7 +46,7 @@ const ModalCancelSO = ({ handleCloseCancelModal, showCancelModal, API_URL, setre
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={handleCloseCancelModal}>Close</Button>
-                <Button variant="primary" onClick={saveData}>Save</Button>
+                <Button variant="primary" onClick={saveData}>{ loadingSaving ? "Saving..." : "Save" }</Button>
             </Modal.Footer>
         </Modal>
     );

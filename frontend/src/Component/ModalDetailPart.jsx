@@ -5,6 +5,7 @@ import DataTable from 'react-data-table-component';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useGlobal } from '../GlobalContext';
+import he from 'he';
 
 const ButtonAction = ({...props}) => {
     const ClickDelete = (id) => {
@@ -57,7 +58,7 @@ const ModalDetailPart = ({ show, handleClose, data, loadingDetailPart, customSty
         { name: 'Vendor Name', selector: row => row.vendor_name },
         { name: 'Qty', selector: row => row.qty_kanban },
         { name: 'Total Qty', selector: row => row.total_qty },
-        { name: 'Price', selector: row => `Rp. ${numberFormat(row.total_price)}` },
+        { name: 'Price', selector: row => `Rp. ${numberFormat(row.total_price)}`, width: '150px' },
         { name: "Action", selector: (row) => 
             <ButtonAction data={row} API_URL={API_URL} setreloadTable={setreloadTable} ShowPart={ShowPart} />, 
         sortable: true },
@@ -78,15 +79,14 @@ const ModalDetailPart = ({ show, handleClose, data, loadingDetailPart, customSty
                                     {
                                         statusSO === "Reject"
                                         ? <span className='ms-1 badge badge-danger'>{statusSO}</span>
-                                        : (statusSO === "Release" ? <span className='ms-1 badge badge-success'>{statusSO}</span> : <span className='ms-1 badge badge-warning'>{statusSO}</span>)
+                                        : (statusSO === "Release" ? <span className='ms-1 badge badge-success'>{statusSO}</span> : <span className='ms-1 badge badge-warning text-dark'>{statusSO}</span>)
                                     }
                                 </h6>
                             </div>
                             <div className="col-lg-6 text-end"><h6 style={{fontFamily:"calibri"}}>{shopCode}, Delivery at : {tglDelivery}</h6></div>
                             <div className="col-lg-6">
-                                
                                 {
-                                    rejectReason && <p>Reason Reject : {rejectReason}</p>
+                                    rejectReason && <p>Reason Reject : <div style={{maxWidth:"100%"}}>{rejectReason.split("\n").map((reason,_) => <>{he.decode(reason)}<br /></>)}</div></p>
                                 }
                             </div>
                             <div className="col-lg-6 text-end mb-2">

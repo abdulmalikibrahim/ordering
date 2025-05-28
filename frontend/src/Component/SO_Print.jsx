@@ -1,5 +1,6 @@
 import { QRCodeCanvas } from 'qrcode.react';
 import { useGlobal } from '../GlobalContext';
+import he from 'he';
 
 const SO_Print = ({ dataSO }) => {
     const { formatDateIndo } = useGlobal();
@@ -95,7 +96,7 @@ const SO_Print = ({ dataSO }) => {
                                     </tr>
                                     <tr>
                                         <td>Status</td>
-                                        <td>: { dataSO.data_so.release_sign ? <span className='badge badge-success'>Accepted</span> : (dataSO.data_so.reject_date ? <span className='badge badge-danger'>Reject</span> : <span className='badge badge-warning'>Under Approval</span>) }</td>
+                                        <td>: { dataSO.data_so.release_sign ? <span className='badge badge-success text-dark'>Released</span> : (dataSO.data_so.reject_date ? <span className='badge badge-danger'>Reject</span> : <span className='badge badge-warning text-dark'>Under Approval</span>) }</td>
                                     </tr>
                                 </thead>
                             </table>
@@ -125,7 +126,7 @@ const SO_Print = ({ dataSO }) => {
                                             </tr>
                                             <tr>
                                                 <td>Reject Reason</td>
-                                                <td>: {dataSO.data_so.reject_reason}</td>
+                                                <td>{dataSO.data_so.reject_reason.split("\n").map((content,_) => <>{he.decode(content)}<br /></>)}</td>
                                             </tr>
                                         </>
                                         :

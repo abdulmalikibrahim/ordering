@@ -8,6 +8,9 @@ export const GlobalProvider = ({ children }) => {
     const [nameAccount, setNameAccount] = useState('')
     const [deptNameAccount, setDeptNameAccount] = useState('')
     const [levelNameAccount, setLevelNameAccount] = useState('')
+    const [usernameAccount, setUsernameAccount] = useState('')
+    const [emailAccount, setEmailAccount] = useState('')
+    const [deptIdAccount, setDeptIdAccount] = useState('')
     const [reloadCountRemain, setReloadCountRemain] = useState(0)
     const API_URL = process.env.REACT_APP_API_URL;
     
@@ -35,6 +38,12 @@ export const GlobalProvider = ({ children }) => {
         value={{ 
             idAccount,
             setIdAccount,
+            usernameAccount,
+            setUsernameAccount,
+            emailAccount,
+            setEmailAccount,
+            deptIdAccount,
+            setDeptIdAccount,
             levelAccount,
             setLevelAccount,
             nameAccount,

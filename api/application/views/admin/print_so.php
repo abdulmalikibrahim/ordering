@@ -82,7 +82,7 @@ $so_number = $this->input->get('so_number');
                             <tr>
                                 <td>Status</td>
                                 <td>
-                                    : <?= !empty($data_so->release_sign) ? '<span class="badge bg-success">Accepted</span>' : (!empty($data_so->reject_date) ? '<span class="badge bg-danger">Reject</span>' : '<span class="badge bg-warning">Under Approval</span>') ?> 
+                                    : <?= !empty($data_so->release_sign) ? '<span class="badge bg-success text-dark">Released</span>' : (!empty($data_so->reject_date) ? '<span class="badge bg-danger">Reject</span>' : '<span class="badge bg-warning text-dark">Under Approval</span>') ?> 
                                     
                                 </td>
                             </tr>

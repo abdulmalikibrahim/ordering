@@ -160,6 +160,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
     const [filterSPVSign, setFilterSPVSign] = useState('');
     const [filterMNGSign, setFilterMNGSign] = useState('');
     const [filterRelease, setFilterRelease] = useState('');
+    const [laodingRelease, setLoadingRelease] = useState(false);
 
     const filteredData = data.filter(item =>
         item.so_number.toLowerCase().includes(filterSONumber.toLowerCase()) &&
@@ -256,6 +257,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
     }
 
     const ClickRelease = async (so_number) => {
+        setLoadingRelease(so_number)
         try {
             const formdata = new FormData();
             formdata.append("so_number",so_number);
@@ -266,8 +268,10 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
             if(response.status === 200){
                 Swal.fire("Berhasil!", "Release berhasil di lakukan.", "success");
                 setreloadTable(Math.random() * 10);
+                setLoadingRelease(false)
             }
         } catch (error) {
+            setLoadingRelease(false)
             if(error.response.status === 400){
                 Swal.fire("Error", error.response.data.res, "warning");
             }else{
@@ -495,7 +499,7 @@ const Table = ({API_URL, reloadTable, setreloadTable, titleTable, modeInput, Sho
                                 onClick={() => ClickRelease(row.so_number)} 
                                 style={{fontSize:'9pt'}}
                                 >
-                                    <i className="fas fa-check"></i> Release
+                                    { laodingRelease == row.so_number ? <><i className="fas fa-spinner fa-spin"></i> Releasing...</> : <><i className="fas fa-check"></i> Release</> }
                                 </Button>
                         ) 
                         : (!row.release_sign_time ? <span className="badge badge-warning text-dark mt-1">Waiting Release</span> : <>{row.release_sign}<br /><span className="badge badge-success text-dark mt-1">{row.release_sign_time}</span></>) 
@@ -592,7 +596,7 @@ const FormAdd = ({ handleClose, show, API_URL, setreloadTable, modeInput }) => {
             formData.append("modeInput",modeInput);
             formData.append("file", file);
             formData.append("pic", pic);
-            await axios.post(`${API_URL}/upload_parts`, formData, {
+            const exec_input = await axios.post(`${API_URL}/upload_parts`, formData, {
                 withCredentials: true,
             });
             setreloadTable((prev) => prev + 1);

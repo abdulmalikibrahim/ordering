@@ -5,6 +5,7 @@ import axios from "axios";
 import Button from "react-bootstrap/Button";
 import Modal from 'react-bootstrap/Modal';
 import Swal from 'sweetalert2';
+import SelectDepartement from "../Component/SelectDepartement";
 
 const Account = ({API_URL}) => {
     const [reloadTable,setreloadTable] = useState(1);
@@ -134,6 +135,7 @@ const Table = ({API_URL, reloadTable, handleShow, setmode, setdataUpdate, setrel
         { name: "No", selector: (row, index) => index + 1, sortable: true, width: "70px" },
         { name: "Nama", selector: (row) => row.name, sortable: true },
         { name: "Username", selector: (row) => row.username, sortable: true },
+        { name: "Email", selector: (row) => row.email, sortable: true },
         { name: "Departement", selector: (row) => row.dept, sortable: true },
         { name: "Level", selector: (row) => row.level, sortable: true },
         { name: "Action", selector: (row) => 
@@ -175,8 +177,7 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
     const [name, setName] = useState('');
     const [dept, setDept] = useState('');
     const [level, setLevel] = useState(1);
-    const [spv, setSPV] = useState(0);
-    const [mng, setMNG] = useState(0);
+    const [email, setEmail] = useState('');
     const [idUpdate, setidUpdate] = useState(0);
     const [dataDept, setdataDept] = useState([]);
     
@@ -190,9 +191,8 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
             setPassword(dataUpdate.password || '');
             setName(dataUpdate.name || '');
             setDept(dataUpdate.id_dept || '');
+            setEmail(dataUpdate.email || '');
             setLevel(dataUpdate.id_level || 1);
-            setSPV(dataUpdate.id_spv || 0);
-            setMNG(dataUpdate.id_mng || 0);
             setidUpdate(dataUpdate.id || 0);
         } else {
             setidUpdate(0);
@@ -200,21 +200,8 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
             setPassword('');
             setName('');
             setDept('');
+            setEmail('');
             setLevel(1);
-            setSPV(0);
-            setMNG(0);
-        }
-    };
-
-    // Ambil daftar departemen
-    const GetDept = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/get_dept`);
-            if (response.status === 200) {
-                setdataDept(response.data);
-            }
-        } catch (error) {
-            console.error(error);
         }
     };
 
@@ -227,11 +214,12 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
             formdata.append('username', username);
             formdata.append('password', password);
             formdata.append('dept', dept);
+            formdata.append('email', email);
             formdata.append('level', level);
             formdata.append('mode', mode);
 
             // console.log("Data yang dikirim ke backend:", {
-            //     idUpdate, name, username, password, dept, level, spv, mng, mode
+            //     idUpdate, name, username, password, dept, email, level, mode
             // });
 
             const response = await axios.post(`${API_URL}/save_account`, formdata);
@@ -242,7 +230,6 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                 handleClose();
             }
         } catch (error) {
-            console.log(error.response)
             if (error.response.status === 400) {
                 Swal.fire("Error", error.response.data.res, "error");
             } else {
@@ -253,7 +240,6 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
     };
 
     useEffect(() => {
-        GetDept();
         clearForm();
     }, [dataUpdate]);
 
@@ -268,6 +254,9 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                 
                 <p className="mb-1">Username {requiredSymbol}</p>
                 <input type="text" className="mb-2 form-control" value={username} onChange={(e) => setUsername(e.target.value)} />
+                
+                <p className="mb-1">Email {requiredSymbol}</p>
+                <input type="email" className="mb-2 form-control" value={email} onChange={(e) => setEmail(e.target.value)} />
 
                 {mode === "add" && (
                     <>
@@ -277,12 +266,7 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                 )}
 
                 <p className="mb-1">Departement {requiredSymbol}</p>
-                <select className="mb-2 form-control text-dark" value={dept} onChange={(e) => setDept(e.target.value)}>
-                    <option value="">Pilih Departement</option>
-                    {dataDept.map((value) => (
-                        <option key={value.id} value={value.id}>{value.name}</option>
-                    ))}
-                </select>
+                <SelectDepartement deptName={dept} API_URL={API_URL} />
 
                 <p className="mb-1">Level {requiredSymbol}</p>
                 <select className="mb-2 form-control text-dark" value={level} onChange={(e) => setLevel(parseInt(e.target.value, 10))}>

@@ -84,3 +84,7 @@ $route['export_master'] = 'API/export_master';
 $route['export_detail_part'] = 'API/export_detail_part';
 $route['get_detail_so'] = 'API/get_detail_so';
 $route['print_so'] = 'API/print_so';
+$route['direct_approve'] = 'API/direct_approve';
+$route['exec_direct_approve'] = 'API/exec_direct_approve';
+$route['update_profile'] = 'API/update_profile';
+$route['change_password'] = 'API/change_password';

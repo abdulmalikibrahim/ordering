@@ -10,6 +10,9 @@ const NavBar = ({API_URL,handleLogout}) => {
         setDeptNameAccount,
         setLevelNameAccount,
         setIdAccount,
+        setUsernameAccount,
+        setDeptIdAccount,
+        setEmailAccount,
         nameAccount,
     } = useGlobal();
     const navigate = useNavigate();
@@ -21,11 +24,15 @@ const NavBar = ({API_URL,handleLogout}) => {
             if(response.status === 202){
                 navigate('/')
             }else if(response.status === 200){
+                console.log(response.data)
                 setLevelAccount(response.data.level)
                 setIdAccount(response.data.id_user)
+                setUsernameAccount(response.data.username)
                 setNameAccount(response.data.name)
                 setDeptNameAccount(response.data.dept)
                 setLevelNameAccount(response.data.level_name)
+                setDeptIdAccount(response.data.dept_id)
+                setEmailAccount(response.data.email)
             }
         } catch (error) {
             console.error(error)

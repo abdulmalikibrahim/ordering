@@ -148,6 +148,12 @@ const SideBar = ({handleLogout, countRemainSO}) => {
                     </li>
                 </>
             }
+            <li className={pageName === 'myprofile' ? "nav-item active" : "nav-item"}>
+                <Link className="nav-link" to="/myprofile">
+                    <span className="menu-title">My Profile</span>
+                    <i className="mdi mdi-account menu-icon"></i>
+                </Link>
+            </li>
             <li className="nav-item">
                 <a href='#' className="nav-link" onClick={handleLogout}>
                     <span className="menu-title">Sign Out</span>

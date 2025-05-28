@@ -56,6 +56,8 @@ const Index = ({children,API_URL}) => {
             setTitleIcon('Remain Release', 'mdi mdi-book-open-variant');
         } else if (pageName === "remain_approve_other_shop"){
             setTitleIcon('Approval Other Shop', 'mdi mdi-information');
+        } else if (pageName === "myprofile"){
+            setTitleIcon('My Profile', 'mdi mdi-account');
         } else {
             setTitleIcon('Dashboard', 'mdi mdi-home');
         }
