@@ -80,6 +80,7 @@ $route['data_part_master'] = 'API/data_part_master';
 $route['count_remain_release'] = 'API/count_remain_release';
 $route['cancel_approve_so'] = 'API/cancel_approve_so';
 $route['send_email'] = 'API/send_email';
+$route['test_email'] = 'API/test_email';
 $route['export_master'] = 'API/export_master';
 $route['export_detail_part'] = 'API/export_detail_part';
 $route['get_detail_so'] = 'API/get_detail_so';

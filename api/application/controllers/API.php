@@ -1477,6 +1477,50 @@ class API extends MY_Controller {
         }
         $this->fb($fb);
     }
+    
+    function test_email()
+    {
+        $to = EMAIL_TO_TEST;
+        $subject = "Test";
+        $body = "Ini test email";
+        
+        $curl = curl_init();
+
+        $data = [
+            "sender" => [
+                "name" => EMAIL_NAME,
+                "email" => EMAIL_SENDER
+            ],
+            "to" => [[
+                "email" => $to
+            ]],
+            "subject" => $subject,
+            "htmlContent" => $body
+        ];
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => EMAIL_API_URL,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                "accept: application/json",
+                "api-key: ".EMAIL_API_KEY,
+                "content-type: application/json"
+            ],
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $fb = ["statusCode" => 500, "res" => $err];
+        } else {
+            $fb = ["statusCode" => 200, "timesend" => date("Y-m-d H:i:s"), "to" => $to, "subject" => $subject, "res" => "Kirim email berhasil"];
+        }
+        $this->fb($fb);
+    }
 
     private function exec_send_email($to,$subject,$body)
     {
