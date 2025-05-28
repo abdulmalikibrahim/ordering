@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 
-const SelectDepartement = ({deptName, API_URL}) => {
-    const [dept, setDept] = useState(deptName);
+const SelectDepartement = ({deptName, API_URL, setDept}) => {
     const [dataDept, setdataDept] = useState([]);
 
     // Ambil daftar departemen
@@ -24,7 +23,7 @@ const SelectDepartement = ({deptName, API_URL}) => {
     }, [])
     
     return (
-        <select className="mb-2 form-control text-dark" value={dept} onChange={(e) => setDept(e.target.value)}>
+        <select className="mb-2 form-control text-dark" value={deptName} onChange={(e) => setDept(e.target.value)}>
             <option value="">Pilih Departement</option>
             {dataDept.map((value) => (
                 <option key={value.id} value={value.id}>{value.name}</option>

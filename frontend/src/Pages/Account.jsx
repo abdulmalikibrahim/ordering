@@ -179,7 +179,6 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
     const [level, setLevel] = useState(1);
     const [email, setEmail] = useState('');
     const [idUpdate, setidUpdate] = useState(0);
-    const [dataDept, setdataDept] = useState([]);
     
     const dataLevel = ["Admin", "User", "Supervisor", "Manager"];
     const requiredSymbol = <span className="text-danger">*</span>;
@@ -266,7 +265,7 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                 )}
 
                 <p className="mb-1">Departement {requiredSymbol}</p>
-                <SelectDepartement deptName={dept} API_URL={API_URL} />
+                <SelectDepartement deptName={dept} API_URL={API_URL} setDept={setDept} />
 
                 <p className="mb-1">Level {requiredSymbol}</p>
                 <select className="mb-2 form-control text-dark" value={level} onChange={(e) => setLevel(parseInt(e.target.value, 10))}>

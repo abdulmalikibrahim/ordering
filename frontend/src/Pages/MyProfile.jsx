@@ -114,7 +114,7 @@ const MyProfile = () => {
                                 }
                             </select>
                             <p className='mb-2'>Departement</p>
-                            <SelectDepartement deptName={deptId} API_URL={API_URL} onChange={(e) => setDeptId(e.target.value)} />
+                            <SelectDepartement deptName={deptId} API_URL={API_URL} setDept={setDeptId} />
                             <p className='mb-2'>Email</p>
                             <input type="email" className="form-control mb-2" placeholder='Email' value={email} onChange={(e) => setEmail(e.target.value)} />
                         </div>
