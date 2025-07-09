@@ -24,7 +24,7 @@ const MyProfile = () => {
     const [ level, setLevel ] = useState(levelAccount);
     const [ name, setName ] = useState(nameAccount);
     const [ username, setUsername ] = useState(usernameAccount);
-    const [ deptId, setDeptId ] = useState(deptIdAccount);
+    const [ deptList, setDeptList] = useState([]);
     const [ email, setEmail ] = useState(emailAccount);
     const [ password, setPassword ] = useState('');
     const [ passwordConfirm, setPasswordConfirm ] = useState('');
@@ -34,11 +34,37 @@ const MyProfile = () => {
         setLevel(levelAccount);
         setName(nameAccount);
         setUsername(usernameAccount);
-        setDeptId(deptIdAccount);
         setEmail(emailAccount);
 
-        //eslint-disable-next-line
-    }, [])
+        // Kalau deptIdAccount itu bentuknya string json kayak '["1","2"]'
+        try {
+            const parsed = JSON.parse(deptIdAccount);
+            if (Array.isArray(parsed)) {
+                setDeptList(parsed);
+            } else {
+                setDeptList([deptIdAccount]); // fallback
+            }
+        } catch (e) {
+            setDeptList([deptIdAccount]); // fallback
+        }
+
+    }, []);
+
+    const updateDept = (index, value) => {
+        const newList = [...deptList];
+        newList[index] = value;
+        setDeptList(newList);
+    };
+
+    const addDept = () => {
+        setDeptList([...deptList, ""]);
+    };
+
+    const removeDept = (index) => {
+        const newList = [...deptList];
+        newList.splice(index, 1);
+        setDeptList(newList);
+    };
 
     const prosesUpdate = async () => {
         try {
@@ -46,7 +72,7 @@ const MyProfile = () => {
             formdata.append('level',level);
             formdata.append('name',name);
             formdata.append('username',username);
-            formdata.append('dept',deptId);
+            formdata.append('dept', JSON.stringify(deptList));
             formdata.append('email',email);
     
             const response = await axios.post(`${API_URL}/update_profile`, formdata, {
@@ -57,7 +83,7 @@ const MyProfile = () => {
                 setLevelAccount(level);
                 setNameAccount(name);
                 setUsernameAccount(username);
-                setDeptIdAccount(deptId);
+                setDeptIdAccount(deptList);
                 setEmailAccount(email);
             }
         } catch (error) {
@@ -113,8 +139,30 @@ const MyProfile = () => {
                                     level === "1" && <option value="1">Admin</option>
                                 }
                             </select>
-                            <p className='mb-2'>Departement</p>
-                            <SelectDepartement deptName={deptId} API_URL={API_URL} setDept={setDeptId} />
+                            <p className='mb-2'>Departemen</p>
+                            {deptList.map((dept, index) => (
+                                <div key={index} className="d-flex mb-2 align-items-center">
+                                    <SelectDepartement
+                                        deptName={dept}
+                                        API_URL={API_URL}
+                                        setDept={(val) => updateDept(index, val)}
+                                    />
+                                    {deptList.length > 1 && (
+                                        <Button
+                                            variant="danger"
+                                            size="sm"
+                                            className="ms-2"
+                                            onClick={() => removeDept(index)}
+                                        >
+                                            −
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                            <Button variant="outline-primary mb-2" size="sm" onClick={addDept}>
+                                + Tambah Departemen
+                            </Button>
+
                             <p className='mb-2'>Email</p>
                             <input type="email" className="form-control mb-2" placeholder='Email' value={email} onChange={(e) => setEmail(e.target.value)} />
                         </div>

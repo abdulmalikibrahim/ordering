@@ -1669,7 +1669,7 @@ class API extends MY_Controller {
             ->set_rules('level','Level','required|trim|integer')
             ->set_rules('name','Nama','required|trim')
             ->set_rules('username','Username','required|trim')
-            ->set_rules('dept','Departement','required|trim|integer')
+            ->set_rules('dept','Departement','required|trim')
             ->set_rules('email','Email','required|trim|valid_email');
 
         if($this->form_validation->run() === FALSE){
@@ -1680,7 +1680,12 @@ class API extends MY_Controller {
         $name = $this->input->post("name");
         $level = $this->input->post("level");
         $username = $this->input->post("username");
-        $dept = $this->input->post("dept");
+		$deptInput = json_decode($this->input->post('dept'),TRUE);
+		if (!is_array($deptInput)) {
+			$fb = ["statusCode" => 400, "res" => "Departemen wajib diisi minimal 1".$deptInput];
+			$this->fb($fb);
+		}
+		$dept = json_encode($deptInput);
         $email = $this->input->post("email");
         $id_user = $this->id_user;
 
