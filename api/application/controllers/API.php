@@ -157,7 +157,9 @@ class API extends MY_Controller {
             $newData = [];
             if (!empty($data)) {
                 foreach ($data as $row) {  // ✅ Gunakan $row, jangan timpa $data
-                    $dept = $this->model->gd("departement", "name", "id = '$row->dept'", "row");
+                    $dept = $this->model->gd("departement", "name", "id IN (".str_replace(["[","]"],"",$row->dept).")", "result_array");
+					$dataDept = array_column($dept, 'name');
+					$dataDept = implode(",",$dataDept);
                     
                     // Konversi level ke string yang sesuai
                     $level = "Admin";
@@ -175,7 +177,7 @@ class API extends MY_Controller {
                         "username" => $row->username,
                         "name" => $row->name,
                         "email" => $row->email,
-                        "dept" => $dept->name ?? 'Unknown', // Hindari error jika dept NULL
+                        "dept" => $dataDept ?? 'Unknown', // Hindari error jika dept NULL
                         "level" => $level,
                         "id_dept" => $row->dept ?? '',
                         "id_level" => $row->level ?? '',
@@ -197,7 +199,7 @@ class API extends MY_Controller {
             $this->form_validation
                 ->set_rules("name","Nama","required|trim")
                 ->set_rules("username","Username","required|trim")
-                ->set_rules("dept","Departement","required|trim|integer")
+                ->set_rules("dept","Departement","required|trim")
                 ->set_rules("level","Level","required|trim|integer")
                 ->set_rules("email","Email","required|trim|valid_email")
                 ->set_rules("mode","Mode","required|trim");
@@ -214,7 +216,13 @@ class API extends MY_Controller {
             $name = $this->input->post('name');
             $username = $this->input->post('username');
             $password = $this->input->post('password');
-            $dept = $this->input->post('dept');
+			$deptInput = json_decode($this->input->post('dept'),TRUE);
+			if (!is_array($deptInput)) {
+				$fb = ["statusCode" => 400, "res" => "Departemen wajib diisi minimal 1".$deptInput];
+				$this->fb($fb);
+			}
+			$dept = json_encode($deptInput);
+
             $email = $this->input->post('email');
             $level = $this->input->post('level');
             $id_update = $this->input->post('id_update');
@@ -540,9 +548,11 @@ class API extends MY_Controller {
             $check_so_number = $this->model->gd("data_order","COUNT(*) as total","created_time LIKE '%".date("Y-m-")."%' AND tipe = '$mode_input'","row");
             $tipe_so = $mode_input == "upload_so" ? "SO" : ($mode_input == "reduce" ? "REDUCE" : "ADD");
             $so_number = $tipe_so."/PCD/KAP/".date("m/Y/").sprintf("%03d", $check_so_number->total + 1);
-            $detail_account = $this->model->gd("account","dept,(SELECT shop_code FROM departement WHERE id=account.dept) as shop_code","id = '$pic'","row");
-            $spv_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '3' AND dept = '".$detail_account->dept."'","row");
-            $mng_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '4' AND dept = '".$detail_account->dept."'","row");
+            $account = $this->model->gd("account","dept,(SELECT shop_code FROM departement WHERE id=account.dept) as shop_code","id = '$pic'","row");
+			$search_dept = str_replace(["[","]"],"",$account->dept);
+            $shop_code = $this->model->gd("departement","shop_code","id IN (".$search_dept.")","row")->shop_code ?? null;
+            $spv_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '3' AND dept LIKE '%".$search_dept."%'","row");
+            $mng_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '4' AND dept LIKE '%".$search_dept."%'","row");
 
             if(empty($spv_sign) || empty($mng_sign)){
                 $fb = ["statusCode" => 500, "res" => "Upload gagal karena PIC Departement yang anda pilih belum memiliki account SPV atau MNG"];
@@ -569,7 +579,7 @@ class API extends MY_Controller {
                     $data[] = [
                         'so_number' => $so_number,
                         'tgl_delivery' => $tgl_delivery,
-                        'shop_code' => $detail_account->shop_code,
+                        'shop_code' => $shop_code,
                         'part_number' => $sheet->getCell('C' . $row)->getValue(),
                         'vendor_code' => $sheet->getCell('D' . $row)->getValue(),
                         'qty_kanban' => $qty_kanban,
@@ -586,12 +596,12 @@ class API extends MY_Controller {
                 "mng_sign" => $mng_sign->id,
                 "so_number" => $so_number,
                 "tipe" => $mode_input,
-                "shop_code" => $detail_account->shop_code,
+                "shop_code" => $shop_code,
             ];
             $this->model->insert("data_order",$data_input);
             $insert = $this->model->insert_batch("data_part_order",$data);
             if($insert){
-                $spv_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '3' AND dept = '".$detail_account->dept."'","result");
+                $spv_sign = $this->model->gd("account","id,email,name","status = '1' AND level = '3' AND dept LIKE '%".$search_dept."%'","result");
                 if(empty($spv_sign)){
                     $fb = ["statusCode" => 500, "res" => "Upload gagal karena PIC Departement belum memiliki account SPV"];
                     $this->fb($fb);
@@ -618,7 +628,7 @@ class API extends MY_Controller {
                     <br>
                     Atau anda bisa approve melalui link dibawah ini.
                     <br>
-                    <a href="'.base_url("direct_approve?p=".encrypt($id_approve)).'">Approve SO</a>
+                    <a href="'.base_url("direct_approve?p=".urlencode(encrypt($id_approve))).'">Approve SO</a>
                     <br>
                     <br>
                     Terimakasih atas kerjasamanya.
@@ -677,7 +687,6 @@ class API extends MY_Controller {
             
             //KIRIM EMAIL
             $detail_so = $this->get_detail_so("array",$so_number);
-            $level_next_sign = $level == "3" ? "4" : ($level == "4" ? "1" : "pic");
             $detail_next = $this->model->gd("account","id,email,name","id = ".$detail_so["data_so"]->pic,"row");
 
             if(empty($detail_next)){
@@ -808,7 +817,6 @@ class API extends MY_Controller {
         function approve_so()
         {
             $level = $this->level;
-            $id_user = $this->id_user;
             $other = $this->input->get("other");
 
             if(empty($level)){
@@ -826,15 +834,21 @@ class API extends MY_Controller {
 
             //KIRIM EMAIL
             $detail_so = $this->get_detail_so("array",$so_number);
+			$mng_sign = $detail_so["data_so"]->mng_sign;
+			$id_account = $level == "3" ? $mng_sign : "check";
             $level_next_sign = $level == "3" ? "4" : "1";
-            $query_dept_next_sign = $level == "3" ? "AND dept = (SELECT dept FROM account WHERE id = '".$detail_so["data_so"]->pic."')" : "";
-            $detail_next = $this->model->gd("account","id,email,name","status = '1' AND level = '$level_next_sign' $query_dept_next_sign","result");
+
+			if($id_account == "check"){
+				$detail_next = $this->model->gd("account","id,email,name","status = '1' AND level = '1'","result"); //KHUSUS UNTUK LEVEL MNG APPROVE DAN LARI KE ADMIN
+			}else{
+				$detail_next = $this->model->gd("account","id,email,name","status = '1' AND id = '$id_account'","result");
+			}
 
             if(empty($detail_next)){
                 $fb = ["statusCode" => 500, "res" => "Tidak ada akun yang bisa dihubungi untuk level selanjutnya"];
                 $this->fb($fb);
             }
-
+			
             foreach ($detail_next as $detail_next) {
                 $to = $detail_next->email;
                 $subject = "Confirmation SO Number $so_number";
@@ -854,7 +868,7 @@ class API extends MY_Controller {
                 <br>
                 Atau anda bisa approve melalui link dibawah ini.
                 <br>
-                <a href="'.base_url("direct_approve?p=".encrypt($id_approve)).'">Approve SO</a>
+                <a href="'.base_url("direct_approve?p=".urlencode(encrypt($id_approve))).'">Approve SO</a>
                 <br>
                 <br>
                 Terimakasih atas kerjasamanya.
@@ -955,6 +969,7 @@ class API extends MY_Controller {
             $this->fb($fb);
         }
         $decrypt = decrypt($p);
+		echo $decrypt."1";
         if(empty($decrypt)){
             $fb = ["statusCode" => 400, "res" => "Parameter tidak valid"];
             $this->fb($fb);
@@ -987,17 +1002,17 @@ class API extends MY_Controller {
         
         $so_already_approve = "no";
         $id_approve = "";
-        if(!empty($check_so->spv_sign_time) && $level == "3"){
+        if(!empty($check_so->spv_sign_time) && $level == "3"){ //SPV
             $id_approve = $check_so->spv_sign;
             $so_already_approve = "yes";
         }
 
-        if(!empty($check_so->mng_sign_time) && $level == "4"){
+        if(!empty($check_so->mng_sign_time) && $level == "4"){ //MNG
             $id_approve = $check_so->mng_sign;
             $so_already_approve = "yes";
         }
         
-        if(!empty($check_so->release_sign_time) && $level == "1"){
+        if(!empty($check_so->release_sign_time) && $level == "1"){ //ADMIN
             $id_approve = $check_so->release_sign;
             $so_already_approve = "yes";
         }
@@ -1018,13 +1033,15 @@ class API extends MY_Controller {
 
         //KIRIM EMAIL
         $detail_so = $this->get_detail_so("array",$so_number);
-        $level_next_sign = $level == "3" ? "4" : ($level == "4" ? "1" : "pic");
-        if($level_next_sign == "pic"){
-            $detail_next = $this->model->gd("account","id,email,name","id = ".$detail_so["data_so"]->pic,"row");
-        }else{
-            $query_dept_next_sign = $level == "3" ? "AND dept = (SELECT dept FROM account WHERE id = '$id_user')" : "";
-            $detail_next = $this->model->gd("account","id,email,name","status = '1' AND level = '$level_next_sign' $query_dept_next_sign","result");
-        }
+		$mng_sign = $detail_so["data_so"]->mng_sign;
+		$id_account = $level == "3" ? $mng_sign : "check";
+		$level_next_sign = $level == "3" ? "4" : "1";
+
+		if($id_account == "check"){
+			$detail_next = $this->model->gd("account","id,email,name","status = '1' AND level = '1'","result"); //KHUSUS UNTUK LEVEL MNG APPROVE DAN LARI KE ADMIN
+		}else{
+			$detail_next = $this->model->gd("account","id,email,name","status = '1' AND id = '$id_account'","result");
+		}
 
         if(empty($detail_next)){
             $fb = ["statusCode" => 500, "res" => "Tidak ada akun yang bisa dihubungi untuk level selanjutnya"];
@@ -1072,7 +1089,7 @@ class API extends MY_Controller {
                 <br>
                 Atau anda bisa approve melalui link dibawah ini.
                 <br>
-                <a href="'.base_url("direct_approve?p=".encrypt($id_approve)).'">Approve SO</a>
+                <a href="'.base_url("direct_approve?p=".urlencode(encrypt($id_approve))).'">Approve SO</a>
                 <br>
                 <br>
                 Terimakasih atas kerjasamanya.
@@ -1119,14 +1136,18 @@ class API extends MY_Controller {
 
     function get_pic_shop()
     {
-        $pic = $this->model->gd("account","name,id,(SELECT name FROM departement WHERE id=account.dept) as name_dept","level = '2'","result");
+        $pic = $this->model->gd("account","name,id,dept","level = '2'","result");
         $return_data = [];
         if(!empty($pic)){
             foreach ($pic as $pic) {
+				$dept = $this->model->gd("departement", "name", "id IN (".str_replace(["[","]"],"",$pic->dept).")", "result_array");
+				$dataDept = array_column($dept, 'name');
+				$dataDept = implode(",",$dataDept);
+
                 $return_data[] = [
                     "name" => $pic->name,
                     "id" => $pic->id,
-                    "name_dept" => $pic->name_dept
+                    "name_dept" => $dataDept
                 ];
             }
         }

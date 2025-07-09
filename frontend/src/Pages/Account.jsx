@@ -20,7 +20,7 @@ const Account = ({API_URL}) => {
         <Index API_URL={API_URL}>
             <div className="row">
                 <div className="col-12 text-end mb-2">
-                    <Button variant="outline-primary" onClick={handleShow}><i className="fas fa-plus"></i> Tambah</Button>
+                    <Button variant="outline-primary" onClick={() => { setmode("add"); setdataUpdate([]); console.log(mode); handleShow(); }}><i className="fas fa-plus"></i> Tambah</Button>
                 </div>
                 <div className="col-12">
                     <Table API_URL={API_URL} reloadTable={reloadTable} handleShow={handleShow} setmode={setmode} setdataUpdate={setdataUpdate} setreloadTable={setreloadTable} />
@@ -171,40 +171,36 @@ const Table = ({API_URL, reloadTable, handleShow, setmode, setdataUpdate, setrel
     );
 }
 
-const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate}) => {
+const FormAddAccount = ({ handleClose, show, API_URL, mode, setreloadTable, dataUpdate }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
-    const [dept, setDept] = useState('');
+    const [deptList, setDeptList] = useState(['']);
     const [level, setLevel] = useState(1);
     const [email, setEmail] = useState('');
     const [idUpdate, setidUpdate] = useState(0);
-    
+
     const dataLevel = ["Admin", "User", "Supervisor", "Manager"];
     const requiredSymbol = <span className="text-danger">*</span>;
 
-    // Fungsi Reset Form
     const clearForm = () => {
         if (dataUpdate) {
             setUsername(dataUpdate.username || '');
             setPassword(dataUpdate.password || '');
             setName(dataUpdate.name || '');
-            setDept(dataUpdate.id_dept || '');
             setEmail(dataUpdate.email || '');
             setLevel(dataUpdate.id_level || 1);
             setidUpdate(dataUpdate.id || 0);
-        } else {
-            setidUpdate(0);
-            setUsername('');
-            setPassword('');
-            setName('');
-            setDept('');
-            setEmail('');
-            setLevel(1);
+            try {
+                const parsedDept = JSON.parse(dataUpdate.id_dept);
+                setDeptList(Array.isArray(parsedDept) ? parsedDept : []);
+            } catch (e) {
+                console.error("Gagal parsing id_dept:", e);
+                setDeptList([]);
+            }
         }
     };
 
-    // Simpan Data
     const SaveData = async () => {
         try {
             const formdata = new FormData();
@@ -212,14 +208,10 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
             formdata.append('name', name);
             formdata.append('username', username);
             formdata.append('password', password);
-            formdata.append('dept', dept);
             formdata.append('email', email);
             formdata.append('level', level);
             formdata.append('mode', mode);
-
-            // console.log("Data yang dikirim ke backend:", {
-            //     idUpdate, name, username, password, dept, email, level, mode
-            // });
+            formdata.append('dept', JSON.stringify(deptList)); // Simpan array
 
             const response = await axios.post(`${API_URL}/save_account`, formdata);
             if (response.status === 200) {
@@ -229,17 +221,38 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                 handleClose();
             }
         } catch (error) {
-            if (error.response.status === 400) {
-                Swal.fire("Error", error.response.data.res, "error");
-            } else {
-                Swal.fire("Error", "Maaf data gagal disimpan", "error");
-            }
-            console.error(error);
+            Swal.fire("Error", error?.response?.data?.res || "Gagal simpan data", "error");
         }
+    };
+
+    const addDept = () => {
+        setDeptList([...deptList, '']);
+    };
+
+    const updateDept = (index, value) => {
+        const newDeptList = [...deptList];
+        newDeptList[index] = value;
+        setDeptList(newDeptList);
+    };
+
+    const removeDept = (index) => {
+        const newDeptList = [...deptList];
+        newDeptList.splice(index, 1);
+        setDeptList(newDeptList.length ? newDeptList : ['']);
     };
 
     useEffect(() => {
         clearForm();
+        console.log(mode)
+        if(mode == "add") {
+            setUsername('');
+            setPassword('');
+            setName('');
+            setEmail('');
+            setLevel(1);
+            setidUpdate(0);
+            setDeptList(['']);
+        }
     }, [dataUpdate]);
 
     return (
@@ -264,10 +277,22 @@ const FormAddAccount = ({handleClose,show,API_URL,mode,setreloadTable,dataUpdate
                     </>
                 )}
 
-                <p className="mb-1">Departement {requiredSymbol}</p>
-                <SelectDepartement deptName={dept} API_URL={API_URL} setDept={setDept} />
+                <p className="mb-1">Departemen {requiredSymbol}</p>
+                {deptList.map((dept, index) => (
+                    <div key={index} className="d-flex mb-2 align-items-center">
+                        <SelectDepartement
+                            deptName={dept}
+                            API_URL={API_URL}
+                            setDept={(val) => updateDept(index, val)}
+                        />
+                        {deptList.length > 1 && (
+                            <Button variant="danger" size="sm" className="ms-2" onClick={() => removeDept(index)}>−</Button>
+                        )}
+                    </div>
+                ))}
+                <Button variant="outline-primary" size="sm" onClick={addDept}>+ Tambah Departemen</Button>
 
-                <p className="mb-1">Level {requiredSymbol}</p>
+                <p className="mb-1 mt-3">Level {requiredSymbol}</p>
                 <select className="mb-2 form-control text-dark" value={level} onChange={(e) => setLevel(parseInt(e.target.value, 10))}>
                     {dataLevel.map((value, index) => (
                         <option key={index} value={index + 1}>{value}</option>
