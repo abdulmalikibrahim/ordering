@@ -969,7 +969,6 @@ class API extends MY_Controller {
             $this->fb($fb);
         }
         $decrypt = decrypt($p);
-		echo $decrypt."1";
         if(empty($decrypt)){
             $fb = ["statusCode" => 400, "res" => "Parameter tidak valid"];
             $this->fb($fb);
@@ -1649,8 +1648,6 @@ class API extends MY_Controller {
 
     function print_so()
     {
-        $so_number = $this->input->get("so_number");
-        $download = $this->input->get("download");
         $data_so = $this->get_detail_so("array");
         if(empty($data_so)){
             $fb = ["statusCode" => 404, "res" => "Data SO tidak ditemukan"];
